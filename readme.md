@@ -112,6 +112,49 @@ Internal helpers:
 
 Internal methods MUST NOT be called directly.
 
+	Execution Control (TNCheck)
+
+TNCheck provides execution state tracking and protection
+against parallel or stalled script runs.
+
+Tracked properties (per script):
+- run (boolean)
+- startTime / endTime
+- runner
+- progress (number)
+- status (string)
+
+Features:
+- Prevents concurrent executions
+- Automatically clears stalled runs
+- Stores state in DocumentProperties
+- Exposes state for UI and spreadsheet formulas
+
+Public API:
+- TNCheck.tryStart(ctx)
+- TNCheck.finish(ctx)
+- TNCheck.setProgress(ctx, value)
+- TNCheck.setStatus(ctx, text)
+- TNCheck.getState(ctx)
+- TNCheck.reset(ctx)
+
+TNCheck MUST be used at the beginning of every long-running script.
+
+	maxDurationMs
+
+Defines the maximum expected execution time for the script.
+Used by TNCheck to detect and recover from stalled executions.
+
+- Value is specified in milliseconds
+- If omitted or null, TNCheck will NOT auto-clear running state
+
+Example:
+
+TNInitiation({
+  runMode: 'TRIGGER_LOG_UI',
+  maxDurationMs: 10 * 60 * 1000
+})
+
 	Script Templates
 
 Файл ScriptTemplate.gs содержит эталонные шаблоны скриптов
