@@ -25,6 +25,12 @@ function TNInitiation(options = {}) {
 
   const ctx = {}
 
+  // --- duration ---
+  ctx.maxDurationMs =
+  typeof options.maxDurationMs === 'number'
+    ? options.maxDurationMs
+    : null
+
   // --- base ---
   ctx.startTime = new Date()
   ctx.executionId = Utilities.getUuid()

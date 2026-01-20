@@ -10,11 +10,12 @@
  * Templates MUST NOT contain business logic.
  * They define structure and execution contract only.
  */
- 
+
 function Script_UserSilent() {
 
   const ctx = TNInitiation({
-    runMode: 'USER_SILENT'
+    runMode: 'USER_SILENT',
+  	maxDurationMs: 5 * 60 * 1000
   })
 
   try {
@@ -34,7 +35,8 @@ function Script_UserSilent() {
 function Script_UserToast() {
 
   const ctx = TNInitiation({
-    runMode: 'USER_TOAST'
+    runMode: 'USER_TOAST',
+  	maxDurationMs: 5 * 60 * 1000
   })
 
   try {
@@ -55,7 +57,8 @@ function Script_UserToast() {
 function Script_TriggerLogUI() {
 
   const ctx = TNInitiation({
-    runMode: 'TRIGGER_LOG_UI'
+    runMode: 'TRIGGER_LOG_UI',
+  	maxDurationMs: 5 * 60 * 1000
   })
 
   try {
@@ -75,7 +78,8 @@ function Script_TriggerLogUI() {
 function Script_TriggerUI() {
 
   const ctx = TNInitiation({
-    runMode: 'TRIGGER_UI'
+    runMode: 'TRIGGER_UI',
+  	maxDurationMs: 5 * 60 * 1000
   })
 
   try {
@@ -95,7 +99,8 @@ function Script_TriggerUI() {
 function Script_TriggerSilent() {
 
   const ctx = TNInitiation({
-    runMode: 'TRIGGER_SILENT'
+    runMode: 'TRIGGER_SILENT',
+  	maxDurationMs: 5 * 60 * 1000
   })
 
   try {
