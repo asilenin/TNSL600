@@ -54,6 +54,8 @@ function TNInitiation(options = {}) {
     level: options.logLevel || 'INFO'
   })
 
+  TNModal.configure(ctx)
+
   TNLog.info(`Start script: ${ctx.scriptName}`)
 
   return ctx
