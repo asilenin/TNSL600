@@ -107,6 +107,51 @@ const TNCheck = (() => {
     _resetState(ctx)
   }
 
+  /**
+ * Checks whether execution time exceeded ctx.maxDurationMs.
+ * Intended to be called during script execution.
+ *
+ * @param {Object} ctx
+ * @returns {boolean} true if execution should stop
+ */
+function shouldStop(ctx) {
+  if (!ctx.maxDurationMs) return false
+
+  const state = _getState(ctx)
+  if (!state.startTime) return false
+
+  const now = Date.now()
+  return now - state.startTime > ctx.maxDurationMs
+}
+
+/**
+ * Returns execution state formatted as a row for spreadsheet UI.
+ * Intended to be used in custom functions or UI bindings.
+ *
+ * @param {string} scriptName
+ * @returns {Array} [run, start, end, status, progress, runner]
+ *
+ * @example
+ * =TN_CHECK_STATE("MyScript")
+ */
+function getStateRow(scriptName) {
+  const ctx = TNInitiation({
+    scriptName,
+    runMode: 'USER_SILENT'
+  })
+
+  const state = TNCheck.getState(ctx)
+
+  return [
+    state.run ? String(state.run).toUpperCase() : '',
+    state.startTime ? new Date(state.startTime) : '',
+    state.endTime ? new Date(state.endTime) : '',
+    state.status || '',
+    Math.round(state.progress || 0),
+    state.runner || ''
+  ]
+}
+
   // ---------- internal ----------
 
   function _key(ctx, name) {

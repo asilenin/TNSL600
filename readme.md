@@ -140,6 +140,16 @@ Public API:
 
 TNCheck MUST be used at the beginning of every long-running script.
 
+	Runtime execution limit
+
+TNCheck supports runtime execution monitoring via ctx.maxDurationMs.
+
+In addition to start-time checks, scripts may call:
+
+- TNCheck.shouldStop(ctx)
+
+to gracefully terminate execution when the expected time limit is exceeded.
+
 	maxDurationMs
 
 Defines the maximum expected execution time for the script.
@@ -154,6 +164,14 @@ TNInitiation({
   runMode: 'TRIGGER_LOG_UI',
   maxDurationMs: 10 * 60 * 1000
 })
+
+	Reading execution state from spreadsheets
+
+TNCheck provides helper methods to expose execution state
+for spreadsheet UI and formulas.
+
+Example:
+=TN_CHECK_STATE("MyScript")
 
 	Script Templates
 

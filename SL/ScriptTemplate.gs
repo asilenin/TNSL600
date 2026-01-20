@@ -31,18 +31,38 @@ function Script_UserSilent() {
 
     TNCheck.setProgress(ctx, 1)
     TNCheck.setStatus(ctx, 'step 1')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNCheck.setProgress(ctx, 2)
     TNCheck.setStatus(ctx, 'step 2')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNCheck.setProgress(ctx, 3)
     TNCheck.setStatus(ctx, 'step 3')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNCheck.setProgress(ctx, 4)
     TNCheck.setStatus(ctx, 'step 4')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNCheck.setProgress(ctx, 5)
     TNCheck.setStatus(ctx, 'completed')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNLog.success('Script finished successfully')
 
@@ -76,21 +96,40 @@ function Script_UserToast() {
 
     TNLog.info('Started by user')
 
-
     TNCheck.setProgress(ctx, 1)
     TNCheck.setStatus(ctx, 'step 1')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNCheck.setProgress(ctx, 2)
     TNCheck.setStatus(ctx, 'step 2')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNCheck.setProgress(ctx, 3)
     TNCheck.setStatus(ctx, 'step 3')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNCheck.setProgress(ctx, 4)
     TNCheck.setStatus(ctx, 'step 4')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNCheck.setProgress(ctx, 5)
     TNCheck.setStatus(ctx, 'completed')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNLog.success('Script finished successfully')
 
@@ -126,18 +165,38 @@ function Script_TriggerLogUI() {
 
     TNCheck.setProgress(ctx, 1)
     TNCheck.setStatus(ctx, 'step 1')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNCheck.setProgress(ctx, 2)
     TNCheck.setStatus(ctx, 'step 2')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNCheck.setProgress(ctx, 3)
     TNCheck.setStatus(ctx, 'step 3')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNCheck.setProgress(ctx, 4)
     TNCheck.setStatus(ctx, 'step 4')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNCheck.setProgress(ctx, 5)
     TNCheck.setStatus(ctx, 'completed')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNLog.success('Script finished successfully')
 
@@ -173,18 +232,38 @@ function Script_TriggerUI() {
 
     TNCheck.setProgress(ctx, 1)
     TNCheck.setStatus(ctx, 'step 1')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNCheck.setProgress(ctx, 2)
     TNCheck.setStatus(ctx, 'step 2')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNCheck.setProgress(ctx, 3)
     TNCheck.setStatus(ctx, 'step 3')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNCheck.setProgress(ctx, 4)
     TNCheck.setStatus(ctx, 'step 4')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNCheck.setProgress(ctx, 5)
     TNCheck.setStatus(ctx, 'completed')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNLog.success('Script finished successfully')
 
@@ -221,18 +300,38 @@ function Script_TriggerSilent() {
 
     TNCheck.setProgress(ctx, 1)
     TNCheck.setStatus(ctx, 'step 1')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNCheck.setProgress(ctx, 2)
     TNCheck.setStatus(ctx, 'step 2')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNCheck.setProgress(ctx, 3)
     TNCheck.setStatus(ctx, 'step 3')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNCheck.setProgress(ctx, 4)
     TNCheck.setStatus(ctx, 'step 4')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNCheck.setProgress(ctx, 5)
     TNCheck.setStatus(ctx, 'completed')
+	if (TNCheck.shouldStop(ctx)) {
+	  TNLog.alert('Execution time limit exceeded')
+	  return
+	}
 
     TNLog.success('Script finished successfully')
 
