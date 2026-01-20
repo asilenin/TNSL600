@@ -76,6 +76,21 @@ Failure to do so will result in lost log records.
 Logs are buffered in memory and written only during flush().
 This significantly improves performance and reduces quota usage.
 
+	User Interface (TNModal)
+
+TNModal provides safe user interaction methods (toast, alert)
+that respect script run mode and execution context.
+
+UI methods are automatically disabled in trigger and background executions.
+
+Public API:
+•	TNModal.toast()
+•	TNModal.info()
+•	TNModal.alert()
+•	TNModal.error()
+
+TNModal is configured automatically during TNInitiation.
+
 	Public and Internal API
 
 The library exposes a limited set of public methods intended
