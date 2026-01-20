@@ -69,6 +69,34 @@ TNLog.error(error)
 •	логгер никогда не должен останавливать выполнение скрипта;
 •	UI и toast используются только если это разрешено контекстом.
 
+IMPORTANT:
+Every script MUST call `TNLog.flush()` in a `finally` block.
+Failure to do so will result in lost log records.
+
+Logs are buffered in memory and written only during flush().
+This significantly improves performance and reduces quota usage.
+
+	Public and Internal API
+
+The library exposes a limited set of public methods intended
+to be used by consumer scripts.
+
+Public API:
+•	TNInitiation()
+•	TNLog.info()
+•	TNLog.success()
+•	TNLog.alert()
+•	TNLog.error()
+•	TNLog.flush()
+
+Internal helpers:
+•	detectCallerFunctionName()
+•	safeGetActiveUser()
+•	safeGetEffectiveUser()
+•	TNLog.configure()
+
+Internal methods MUST NOT be called directly.
+
 	Script Templates
 
 Файл ScriptTemplate.gs содержит эталонные шаблоны скриптов

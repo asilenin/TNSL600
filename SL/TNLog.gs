@@ -1,3 +1,15 @@
+/**
+ * TNLog — centralized logging service for SL/TN script factory.
+ *
+ * Features:
+ * - Buffered logging (logs are written only on flush)
+ * - Console output is always enabled
+ * - Optional output to spreadsheet log, UI sheet, or toast
+ * - Safe by design: logging failures never interrupt script execution
+ *
+ * TNLog MUST be configured via TNInitiation().
+ * Direct usage without initialization is not supported.
+ */
 const TNLog = (() => {
 
   // ---------- internal state ----------
@@ -19,7 +31,22 @@ const TNLog = (() => {
   }
 
   // ---------- public api ----------
-
+/**
+ * Configures TNLog using execution context and environment settings.
+ *
+ * This method is called automatically by TNInitiation()
+ * and should NOT be called manually in business logic.
+ *
+ * @param {Object} options - Logger configuration
+ * @param {Object} options.context - Script execution context (TNSV)
+ * @param {boolean} options.console - Enable console logging (always true by convention)
+ * @param {boolean} options.file - Enable writing logs to spreadsheet
+ * @param {boolean} options.ui - Enable writing logs to UI sheet
+ * @param {boolean} options.toast - Enable toast notifications
+ * @param {string} options.level - Minimal log level to record
+ *
+ * @internal
+ */
   function configure(options = {}) {
     try {
       _ctx = options.context || null
@@ -29,23 +56,82 @@ const TNLog = (() => {
     }
   }
 
+/**
+ * Writes an informational log message.
+ *
+ * Intended for normal execution flow messages.
+ *
+ * @param {string} message - Log message
+ *
+ * @example
+ * TNLog.info('Processing started');
+ */
   function info(message) {
     return _log('INFO', message)
   }
 
+/**
+ * Writes a success log message.
+ *
+ * Intended to mark successful completion of an operation.
+ *
+ * @param {string} message - Log message
+ *
+ * @example
+ * TNLog.success('Data successfully updated');
+ */
   function success(message) {
     return _log('SUCCESS', message)
   }
 
+/**
+ * Writes an alert log message.
+ *
+ * Intended for important but non-fatal situations
+ * that require attention.
+ *
+ * @param {string} message - Log message
+ *
+ * @example
+ * TNLog.alert('Queue is empty, waiting');
+ */
   function alert(message) {
     return _log('ALERT', message)
   }
 
+/**
+ * Writes an error log message.
+ *
+ * Accepts either an Error object or a string.
+ * Stack trace is logged when available.
+ *
+ * @param {Error|string} error - Error object or error description
+ *
+ * @example
+ * TNLog.error(e);
+ */
   function error(err) {
     const msg = err instanceof Error ? err.stack || err.message : err
     return _log('ERROR', msg)
   }
 
+/**
+ * Flushes buffered log records to all configured outputs.
+ *
+ * This method MUST be called in the `finally` block
+ * of every script using TNLog.
+ *
+ * It writes:
+ * - accumulated logs to spreadsheet (if enabled)
+ * - accumulated logs to UI sheet (if enabled)
+ *
+ * After flushing, the log buffer is cleared.
+ *
+ * @example
+ * finally {
+ *   TNLog.flush();
+ * }
+ */
   function flush() {
     try {
       if (!_ctx || !_ctx.logBuffer || !_ctx.logBuffer.length) return

@@ -1,3 +1,16 @@
+/**
+ * Script templates for SL/TN library.
+ *
+ * This file contains reference implementations of script entry points
+ * for different execution scenarios:
+ * - user-triggered
+ * - background triggers
+ * - silent / UI / toast modes
+ *
+ * Templates MUST NOT contain business logic.
+ * They define structure and execution contract only.
+ */
+ 
 function Script_UserSilent() {
 
   const ctx = TNInitiation({
