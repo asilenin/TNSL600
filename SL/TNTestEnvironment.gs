@@ -14,6 +14,7 @@
  * - TNTestEnvironment is NOT part of TNInitiation lifecycle
  * - It must be called explicitly from a consumer project
  * - Safe to call multiple times
+ * - Declared as var (not const/let) for GAS library export compatibility
  *
  * Usage from consumer project:
  *
@@ -21,16 +22,16 @@
  *     SL6_Main.TNTestEnvironment.run()
  *   }
  */
-const TNTestEnvironment = (() => {
+var TNTestEnvironment = {
 
   /**
    * Entry point for environment test.
    * Should be called directly by user.
    */
-  function run() {
-    const user = _safeGetActiveUser()
+  run: function () {
+    var user = this._safeGetActiveUser()
 
-    const authInfo = ScriptApp.getAuthorizationInfo(
+    var authInfo = ScriptApp.getAuthorizationInfo(
       ScriptApp.AuthMode.FULL
     )
 
@@ -38,24 +39,22 @@ const TNTestEnvironment = (() => {
       authInfo.getAuthorizationStatus() ===
       ScriptApp.AuthorizationStatus.REQUIRED
     ) {
-      _requestAuthorization(authInfo.getAuthorizationUrl(), user)
+      this._requestAuthorization(authInfo.getAuthorizationUrl(), user)
       return
     }
 
-    _notifyReady(user)
-  }
+    this._notifyReady(user)
+  },
 
-  // ----------------------------------------------------
-  // internal helpers
-  // ----------------------------------------------------
+  // ---------- internal helpers ----------
 
-  function _requestAuthorization(authUrl, user) {
+  _requestAuthorization: function (authUrl, user) {
     try {
-      const html = HtmlService.createHtmlOutput(
-        `<script>
-           window.open('${authUrl}');
-           google.script.host.close();
-         </script>`
+      var html = HtmlService.createHtmlOutput(
+        '<script>' +
+        "window.open('" + authUrl + "');" +
+        'google.script.host.close();' +
+        '</script>'
       )
       SpreadsheetApp
         .getUi()
@@ -63,9 +62,9 @@ const TNTestEnvironment = (() => {
     } catch (e) {
       console.error('TNTestEnvironment auth UI failed', e)
     }
-  }
+  },
 
-  function _notifyReady(user) {
+  _notifyReady: function (user) {
     try {
       SpreadsheetApp.getActive().toast(
         user + '\n✅ Environment is ready',
@@ -75,9 +74,9 @@ const TNTestEnvironment = (() => {
     } catch (e) {
       console.error('TNTestEnvironment toast failed', e)
     }
-  }
+  },
 
-  function _safeGetActiveUser() {
+  _safeGetActiveUser: function () {
     try {
       return Session.getActiveUser().getEmail()
     } catch (e) {
@@ -85,8 +84,4 @@ const TNTestEnvironment = (() => {
     }
   }
 
-  return {
-    run
-  }
-
-})()
+}
