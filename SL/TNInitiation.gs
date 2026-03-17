@@ -1,15 +1,16 @@
 /**
- * Initializes script execution context (ctx) and configures environment.
+ * Initializes script execution context (ctx) and configures all services.
  *
  * This function MUST be the first call in any script using the SL/TN library.
  *
  * @param {Object} options - Initialization options
- * @param {string} [options.scriptName] - Explicit script name (RECOMMENDED when called from another library)
- * @param {string} [options.runMode='USER_SILENT'] - Execution mode
- * @param {string} [options.logLevel='INFO'] - Minimal log level
- * @param {number} [options.maxDurationMs] - Expected max execution time
- * @param {string} [options.dataMode='GAS'] - Data backend mode ('GAS' | 'API')
- * @param {boolean} [options.debug=false] - Enable debug logging of ctx contents
+ * @param {string} [options.scriptName]             - Explicit script name (required when called from another library)
+ * @param {string} [options.runMode='USER_SILENT']  - Execution mode
+ * @param {string} [options.logLevel='INFO']        - Minimal log level: 'DEBUG' | 'INFO' | 'SUCCESS' | 'ALERT' | 'ERROR'
+ * @param {number} [options.maxDurationMs]          - Expected max execution time in ms (used by TNCheck and TNRunTime)
+ * @param {string} [options.dataMode='GAS']         - Data backend: 'GAS' | 'API'
+ * @param {boolean} [options.enableMainList=false]  - Attach ctx.mainList (TNMainList) to context
+ * @param {boolean} [options.debug=false]           - Dump ctx contents to log on startup
  *
  * @returns {Object} ctx - Script execution context
  */
@@ -57,15 +58,18 @@ function TNInitiation(options) {
   // --- logging buffer ---
   ctx.logBuffer = []
 
-  // --- services (FACTORIES) ---
-  ctx.log = TNLog()
-  ctx.modal = TNModal()
-  ctx.check = TNCheck()
-  ctx.runtime = TNRunTime()
-  ctx.data = TNDataProcessor(ctx)
+  // --- services (factories) ---
+  ctx.log       = TNLog()
+  ctx.modal     = TNModal()
+  ctx.check     = TNCheck()
+  ctx.runtime   = TNRunTime()
+  ctx.data      = TNDataProcessor(ctx)
   ctx.drive     = TNDriveProcessor(ctx)
   ctx.templates = TNTemplateSelector(ctx)
-  ctx.tabs = TNTabOpener(ctx)
+  ctx.tabs      = TNTabOpener(ctx)
+
+  // --- optional services ---
+  ctx.mainList  = options.enableMainList === true ? TNMainList(ctx) : null
 
   // --- configure logging ---
   ctx.log.configure({
@@ -84,24 +88,25 @@ function TNInitiation(options) {
   if (ctx.debug === true) {
     ctx.log.info('CTX DEBUG DUMP:')
     ctx.log.info(JSON.stringify({
-      scriptName: ctx.scriptName,
-      executionId: ctx.executionId,
-      runMode: ctx.runMode,
-      dataMode: ctx.dataMode,
-      maxDurationMs: ctx.maxDurationMs,
-      user: ctx.user,
-      effectiveUser: ctx.effectiveUser,
-      ssId: ctx.ssId,
-      startTime: ctx.startTime
+      scriptName:     ctx.scriptName,
+      executionId:    ctx.executionId,
+      runMode:        ctx.runMode,
+      dataMode:       ctx.dataMode,
+      maxDurationMs:  ctx.maxDurationMs,
+      enableMainList: options.enableMainList === true,
+      user:           ctx.user,
+      effectiveUser:  ctx.effectiveUser,
+      ssId:           ctx.ssId,
+      startTime:      ctx.startTime
     }))
   }
 
   return ctx
 }
 
-//
-// ---------- helpers ----------
-//
+// ---------- internal helpers ----------
+// These functions are internal to the library.
+// Do NOT call them from consumer scripts.
 
 function safeGetActiveUser() {
   try {
