@@ -8,10 +8,13 @@
  *
  * TNRunTime does NOT:
  * - store any state
- * - interact with UI
+ * - interact with UI directly
  * - manage locks or concurrency
+ *
+ * IMPORTANT:
+ * Exported as a factory function for GAS library compatibility.
  */
-const TNRunTime = (() => {
+function TNRunTime() {
 
   const DEFAULT_SAFETY_MS = 30 * 1000 // 30 seconds safety margin
 
@@ -21,7 +24,7 @@ const TNRunTime = (() => {
    * If ctx.maxDurationMs is not defined, returns Infinity.
    *
    * @param {Object} ctx - Script execution context
-   * @returns {number} milliseconds left
+   * @returns {number}
    */
   function timeLeft(ctx) {
     if (!ctx || !ctx.maxDurationMs) return Infinity
@@ -37,56 +40,53 @@ const TNRunTime = (() => {
    * Intended to be called inside loops or between heavy operations.
    *
    * @param {Object} ctx - Script execution context
-   * @param {number} [safetyMs=30000] - Safety margin before hard timeout
+   * @param {number} [safetyMs=30000]
    * @returns {boolean}
-   *
-   * @example
-   * if (TNRunTime.shouldStop(ctx)) break;
    */
-  function shouldStop(ctx, safetyMs = DEFAULT_SAFETY_MS) {
-    return timeLeft(ctx) <= safetyMs
+  function shouldStop(ctx, safetyMs) {
+    const margin = typeof safetyMs === 'number'
+      ? safetyMs
+      : DEFAULT_SAFETY_MS
+
+    return timeLeft(ctx) <= margin
   }
 
   /**
    * Asserts that enough execution time remains.
    *
    * If not enough time is left:
-   * - updates TNCheck status (if available)
-   * - logs controlled error
-   * - throws an Error to trigger catch/finally
+   * - updates execution status (best effort)
+   * - logs warning
+   * - throws Error to exit execution safely
    *
    * Intended for "point of no return" operations.
    *
    * @param {Object} ctx - Script execution context
-   * @param {string} [label] - Optional location label for debugging
-   *
+   * @param {string} [label]
    * @throws {Error}
-   *
-   * @example
-   * TNRunTime.assertTime(ctx, 'before batch write');
    */
-  function assertTime(ctx, label = '') {
+  function assertTime(ctx, label) {
     if (!ctx || !ctx.maxDurationMs) return
 
     const left = timeLeft(ctx)
     if (left > DEFAULT_SAFETY_MS) return
 
     const message =
-      `Execution time limit approaching` +
-      (label ? ` at ${label}` : '') +
-      ` (${Math.round(left / 1000)}s left)`
+      'Execution time limit approaching' +
+      (label ? ' at ' + label : '') +
+      ' (' + Math.round(left / 1000) + 's left)'
 
     // best-effort status update
     try {
-      if (typeof TNCheck !== 'undefined') {
-        TNCheck.setStatus(ctx, message)
+      if (ctx && ctx.check) {
+        ctx.check.setStatus(ctx, message)
       }
     } catch (_) {}
 
-    // log and throw controlled error
+    // best-effort logging
     try {
-      if (typeof TNLog !== 'undefined') {
-        TNLog.alert(message)
+      if (ctx && ctx.log) {
+        ctx.log.alert(message)
       }
     } catch (_) {}
 
@@ -94,9 +94,8 @@ const TNRunTime = (() => {
   }
 
   return {
-    timeLeft,
-    shouldStop,
-    assertTime
+    timeLeft: timeLeft,
+    shouldStop: shouldStop,
+    assertTime: assertTime
   }
-
-})()
+}

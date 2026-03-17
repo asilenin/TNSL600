@@ -1,40 +1,41 @@
 /**
- * Initializes script execution context (TNSV) and configures logging environment.
+ * Initializes script execution context (ctx) and configures environment.
  *
  * This function MUST be the first call in any script using the SL/TN library.
- * It creates a unified execution context shared by all factories and services.
- *
- * Responsibilities:
- * - Detects script name and execution metadata
- * - Collects user and spreadsheet information
- * - Determines run mode (user / trigger / silent / UI)
- * - Initializes log buffer
- * - Configures TNLog according to run mode
  *
  * @param {Object} options - Initialization options
- * @param {string} [options.scriptName] - Explicit script name (optional, auto-detected if omitted)
- * @param {string} [options.runMode='USER_SILENT'] - Execution mode (see README: Run Modes)
- * @param {string} [options.logLevel='INFO'] - Minimal log level to record
+ * @param {string} [options.scriptName] - Explicit script name (RECOMMENDED when called from another library)
+ * @param {string} [options.runMode='USER_SILENT'] - Execution mode
+ * @param {string} [options.logLevel='INFO'] - Minimal log level
+ * @param {number} [options.maxDurationMs] - Expected max execution time
+ * @param {string} [options.dataMode='GAS'] - Data backend mode ('GAS' | 'API')
+ * @param {boolean} [options.debug=false] - Enable debug logging of ctx contents
  *
- * @returns {Object} TNSV - Script execution context
- *
- * @example
- * const ctx = TNInitiation({ runMode: 'USER_TOAST' });
+ * @returns {Object} ctx - Script execution context
  */
-function TNInitiation(options = {}) {
+function TNInitiation(options) {
+  options = options || {}
 
   const ctx = {}
 
-  // --- duration ---
-  ctx.maxDurationMs =
-  typeof options.maxDurationMs === 'number'
-    ? options.maxDurationMs
-    : null
-
-  // --- base ---
+  // --- execution timing ---
   ctx.startTime = new Date()
   ctx.executionId = Utilities.getUuid()
-  ctx.scriptName = options.scriptName || detectCallerFunctionName()
+  ctx.maxDurationMs =
+    typeof options.maxDurationMs === 'number'
+      ? options.maxDurationMs
+      : null
+
+  // --- script identity ---
+  let detectedName = options.scriptName || detectCallerFunctionName()
+  if (
+    typeof detectedName !== 'string' ||
+    detectedName === '' ||
+    detectedName === 'Object'
+  ) {
+    detectedName = options.scriptName || 'unknownScript'
+  }
+  ctx.scriptName = detectedName
 
   // --- spreadsheet ---
   ctx.ss = SpreadsheetApp.getActiveSpreadsheet()
@@ -47,37 +48,60 @@ function TNInitiation(options = {}) {
   // --- run mode ---
   ctx.runMode = options.runMode || 'USER_SILENT'
 
-  // --- log buffer ---
+  // --- data backend ---
+  ctx.dataMode = options.dataMode || 'GAS'
+
+  // --- debug flag ---
+  ctx.debug = options.debug === true
+
+  // --- logging buffer ---
   ctx.logBuffer = []
 
-  // --- log configuration ---
-  TNLog.configure({
+  // --- services (FACTORIES) ---
+  ctx.log = TNLog()
+  ctx.modal = TNModal()
+  ctx.check = TNCheck()
+  ctx.runtime = TNRunTime()
+  ctx.data = TNDataProcessor(ctx)
+  ctx.templates = TNTemplateSelector(ctx)
+  ctx.tabs = TNTabOpener(ctx)
+
+  // --- configure logging ---
+  ctx.log.configure({
     context: ctx,
     console: true,
     file: ctx.runMode === 'TRIGGER_LOG_UI',
-    ui: ctx.runMode === 'TRIGGER_LOG_UI' || ctx.runMode === 'TRIGGER_UI',
-    toast: ctx.runMode === 'USER_TOAST',
     level: options.logLevel || 'INFO'
   })
 
-  TNModal.configure(ctx)
+  // --- configure UI ---
+  ctx.modal.configure(ctx)
 
-  TNLog.info(`Start script: ${ctx.scriptName}`)
+  ctx.log.info('Start script: ' + ctx.scriptName)
+
+  // --- debug dump ---
+  if (ctx.debug === true) {
+    ctx.log.info('CTX DEBUG DUMP:')
+    ctx.log.info(JSON.stringify({
+      scriptName: ctx.scriptName,
+      executionId: ctx.executionId,
+      runMode: ctx.runMode,
+      dataMode: ctx.dataMode,
+      maxDurationMs: ctx.maxDurationMs,
+      user: ctx.user,
+      effectiveUser: ctx.effectiveUser,
+      ssId: ctx.ssId,
+      startTime: ctx.startTime
+    }))
+  }
 
   return ctx
 }
 
+//
 // ---------- helpers ----------
-/**
- * Safely returns the email of the active user.
- *
- * In trigger or restricted environments this value may be unavailable.
- * The function never throws and always returns a string.
- *
- * @returns {string} Active user email or fallback value
- *
- * @internal
- */
+//
+
 function safeGetActiveUser() {
   try {
     return Session.getActiveUser().getEmail()
@@ -86,16 +110,6 @@ function safeGetActiveUser() {
   }
 }
 
-/**
- * Safely returns the email of the effective user executing the script.
- *
- * Useful for auditing and debugging permissions-related issues.
- * The function never throws and always returns a string.
- *
- * @returns {string} Effective user email or fallback value
- *
- * @internal
- */
 function safeGetEffectiveUser() {
   try {
     return Session.getEffectiveUser().getEmail()
@@ -104,24 +118,11 @@ function safeGetEffectiveUser() {
   }
 }
 
-/**
- * Detects the name of the calling function using stack trace inspection.
- *
- * Used internally during initialization to automatically determine
- * the script name when it is not explicitly provided.
- *
- * NOTE: This function should be called ONLY during initialization,
- * as stack inspection is relatively expensive.
- *
- * @returns {string} Caller function name or 'unknownScript'
- *
- * @internal
- */
 function detectCallerFunctionName() {
   try {
     throw new Error()
   } catch (e) {
-    const stack = e.stack.split('\n')
+    const stack = String(e.stack || '').split('\n')
     if (stack.length >= 3) {
       const match = stack[2].match(/at (\w+)/)
       if (match) return match[1]

@@ -3,13 +3,23 @@
  *
  * Provides safe, runMode-aware methods for user notifications.
  * All methods are no-op in non-interactive environments.
+ *
+ * IMPORTANT:
+ * This module is exported as a factory function
+ * to ensure compatibility with Google Apps Script libraries.
  */
-const TNModal = (() => {
+function TNModal() {
 
   let _ctx = null
 
+  /**
+   * Configures TNModal with execution context.
+   * Called automatically from TNInitiation().
+   *
+   * @param {Object} context - Script execution context (ctx)
+   */
   function configure(context) {
-    _ctx = context
+    _ctx = context || null
   }
 
   /**
@@ -19,7 +29,7 @@ const TNModal = (() => {
    * @param {string} message
    */
   function toast(message) {
-    _safeUiCall(() => {
+    _safeUiCall(function () {
       SpreadsheetApp.getActive().toast(String(message))
     })
   }
@@ -40,7 +50,7 @@ const TNModal = (() => {
    * @param {string} message
    */
   function alert(message) {
-    _safeUiCall(() => {
+    _safeUiCall(function () {
       SpreadsheetApp.getUi().alert(String(message))
     })
   }
@@ -51,7 +61,7 @@ const TNModal = (() => {
    * @param {string} message
    */
   function error(message) {
-    _safeUiCall(() => {
+    _safeUiCall(function () {
       SpreadsheetApp.getUi().alert(
         'Error',
         String(message),
@@ -65,9 +75,7 @@ const TNModal = (() => {
   function _safeUiCall(fn) {
     try {
       if (!_ctx) return
-      if (!_ctx.runMode) return
       if (!_isUiAllowed()) return
-
       fn()
     } catch (e) {
       // UI must never break script execution
@@ -75,21 +83,23 @@ const TNModal = (() => {
     }
   }
 
+  /**
+   * Determines whether UI interaction is allowed
+   * for current execution context.
+   *
+   * UI is allowed only for USER_TOAST run mode.
+   */
   function _isUiAllowed() {
-    return (
-      _ctx.runMode === 'USER_TOAST' ||
-      _ctx.runMode === 'USER_SILENT'
-    ) === false
-      ? false
-      : _ctx.runMode === 'USER_TOAST'
+    return _ctx && _ctx.runMode === 'USER_TOAST'
   }
+
+  // ---------- export ----------
 
   return {
-    configure,
-    toast,
-    info,
-    alert,
-    error
+    configure: configure,
+    toast: toast,
+    info: info,
+    alert: alert,
+    error: error
   }
-
-})()
+}

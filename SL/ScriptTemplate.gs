@@ -1,348 +1,190 @@
 /**
- * Script templates for SL/TN library.
+ * Canonical script template for SL/TN (SL6_Main) library.
  *
- * This file contains reference implementations of script entry points
- * for different execution scenarios:
- * - user-triggered
- * - background triggers
- * - silent / UI / toast modes
+ * ==================================================================
+ * USING SL6_Main FROM A CONSUMER SCRIPT
+ * ==================================================================
  *
- * Templates MUST NOT contain business logic.
- * They define structure and execution contract only.
+ * 1) Initialization (MANDATORY)
+ *
+ *   const ctx = SL6_Main.TNInitiation({
+ *     runMode: 'TRIGGER_LOG_UI',     // execution mode
+ *     maxDurationMs: 5 * 60 * 1000,  // execution time limit (ms)
+ *     dataMode: 'GAS'                // data backend: 'GAS' | 'API'
+ *   })
+ *
+ *   dataMode:
+ *     - 'GAS' → SpreadsheetApp (.getRange, .getValues, etc.)
+ *     - 'API' → Sheets Advanced API (Sheets.Spreadsheets.Values)
+ *
+ *   Optional aliases for readability:
+ *
+ *     const { log, check, runtime, data, templates } = ctx
+ *
+ * ==================================================================
+ * AVAILABLE ctx SERVICES
+ * ==================================================================
+ *
+ * Logging (TNLog):
+ *
+ *   log.info('message')
+ *   log.success('message')
+ *   log.alert('message')
+ *   log.error(error)
+ *   log.flush()                // MUST be called in finally
+ *
+ * Runtime control (TNRunTime):
+ *
+ *   runtime.shouldStop(ctx)
+ *   runtime.assertTime(ctx, 'label')
+ *
+ * Execution state / concurrency (TNCheck):
+ *
+ *   check.tryStart(ctx)
+ *   check.setProgress(ctx, n)
+ *   check.setStatus(ctx, 'text')
+ *   check.finish(ctx)
+ *
+ * Data access (TNDataProcessor):
+ *
+ *   // Regular ranges
+ *   data.readRange(ss, 'Sheet1', 'A2:D')
+ *   data.writeRange(ss, 'Sheet1', 'A2', values)
+ *
+ *   // Named ranges
+ *   data.readNamedRange(ss, 'MyNamedRange')
+ *   data.writeNamedRange(ss, 'MyNamedRange', value)
+ *
+ *   // Copy ranges between spreadsheets
+ *   data.copyRange({
+ *     sourceSS: srcSS,
+ *     sourceSheet: 'Source',
+ *     sourceRange: 'A2:D',
+ *     destSS: dstSS,
+ *     destSheet: 'Dest',
+ *     destRange: 'A2',
+ *     clear: true
+ *   })
+ *
+ *   // Named range → named range
+ *   data.updateNamedRange(srcSS, dstSS, 'SRC_NAME', 'DST_NAME')
+ *
+ * Template resolution (TNTemplateSelector):
+ *
+ *   // Get active template URL by name (e.g. 'CE', 'TIMING')
+ *   const url = templates.getActiveTemplateUrl('CE')
+ *
+ *   // Or full metadata
+ *   const tpl = templates.getActiveTemplate('CE')
+ *   // tpl.version
+ *   // tpl.url
+ * 
+ *  * Drive access (TNDriveProcessor):
+ *
+ *   // Configure backend (optional, usually inherited from dataMode)
+ *   ctx.drive.configure({ mode: 'GAS' }) // or 'API'
+ *
+ *   // Get root folder
+ *   const root = DriveApp.getRootFolder()
+ *
+ *   // Create / get subfolder
+ *   const projectFolder =
+ *     ctx.drive.getOrCreateFolder(root, ctx.scriptName)
+ *
+ *   // Ensure editor rights
+ *   ctx.drive.ensureEditorAccess(
+ *     projectFolder.getId(),
+ *     ctx.user
+ *   )
+ *
+ *   // API mode example
+ *   ctx.drive.configure({ mode: 'API' })
+ *   const folderId =
+ *     ctx.drive.getOrCreateFolder('PARENT_FOLDER_ID', 'Reports')
+ *
+ *   //  Main List usage
+ *   const department = ctx.mainList.readNamedRange('DepartmentCode');
+ *   const matrix = ctx.mainList.readSheet('Employees');
+ *
+ * ==================================================================
+ * TEMPLATE GUARANTEES
+ * ==================================================================
+ *
+ * - mandatory TNCheck lifecycle
+ * - runtime safety via TNRunTime
+ * - structured progress and status reporting
+ *
+ * Templates are intentionally minimal
+ * and MUST NOT contain business logic.
  */
+function Script_Template() {
 
-function Script_UserSilent() {
+  //comment const scriptName if script in GAS
+  const scriptName =
+    SL6_Main.TNGetCallerName() || 'Script_Template'
 
-  const ctx = TNInitiation({
-    runMode: 'USER_SILENT',
-  	maxDurationMs: 5 * 60 * 1000
-  })
-
-  const check = TNCheck.tryStart(ctx)
-  if (!check.allowed) {
-    TNLog.alert('Execution already in progress')
-    TNLog.flush()
-    return
-  }
-
-  try {
-
-    TNLog.info('Working silently')
-
-    TNCheck.setProgress(ctx, 1)
-    TNCheck.setStatus(ctx, 'step 1')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
-
-    TNCheck.setProgress(ctx, 2)
-    TNCheck.setStatus(ctx, 'step 2')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
-
-    TNCheck.setProgress(ctx, 3)
-    TNCheck.setStatus(ctx, 'step 3')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
-
-    TNCheck.setProgress(ctx, 4)
-    TNCheck.setStatus(ctx, 'step 4')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
-
-    TNCheck.setProgress(ctx, 5)
-    TNCheck.setStatus(ctx, 'completed')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
-
-    TNLog.success('Script finished successfully')
-
-  } catch (e) {
-
-    TNCheck.setStatus(ctx, `failed: ${e}`)
-    TNLog.error(e)
-
-  } finally {
-
-    TNCheck.finish(ctx)
-    TNLog.flush()
-  }
-}
-
-function Script_UserToast() {
-
-  const ctx = TNInitiation({
-    runMode: 'USER_TOAST',
-  	maxDurationMs: 5 * 60 * 1000
-  })
-
-  const check = TNCheck.tryStart(ctx)
-  if (!check.allowed) {
-    TNLog.alert('Execution already in progress')
-    TNLog.flush()
-    return
-  }
-
-  try {
-
-    TNLog.info('Started by user')
-
-    TNCheck.setProgress(ctx, 1)
-    TNCheck.setStatus(ctx, 'step 1')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
-
-    TNCheck.setProgress(ctx, 2)
-    TNCheck.setStatus(ctx, 'step 2')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
-
-    TNCheck.setProgress(ctx, 3)
-    TNCheck.setStatus(ctx, 'step 3')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
-
-    TNCheck.setProgress(ctx, 4)
-    TNCheck.setStatus(ctx, 'step 4')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
-
-    TNCheck.setProgress(ctx, 5)
-    TNCheck.setStatus(ctx, 'completed')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
-
-    TNLog.success('Script finished successfully')
-
-  } catch (e) {
-
-    TNCheck.setStatus(ctx, `failed: ${e}`)
-    TNLog.error(e)
-
-  } finally {
-
-    TNCheck.finish(ctx)
-    TNLog.flush()
-  }
-}
-
-function Script_TriggerLogUI() {
-
-  const ctx = TNInitiation({
+  const ctx = SL6_Main.TNInitiation({
+    scriptName: scriptName,
     runMode: 'TRIGGER_LOG_UI',
-  	maxDurationMs: 5 * 60 * 1000
+    // runMode: 'USER_SILENT',
+    // runMode: 'USER_TOAST',
+    // runMode: 'TRIGGER_UI',
+    // runMode: 'TRIGGER_SILENT',
+    //enableMainList: true,
+    maxDurationMs: 5 * 60 * 1000,
+    dataMode: 'GAS', // or 'API'
+    debug: false // or true
   })
 
-  const check = TNCheck.tryStart(ctx)
-  if (!check.allowed) {
-    TNLog.alert('Execution already in progress')
-    TNLog.flush()
+  // optional aliases for readability
+  const { log, check, runtime, data, templates, tabs, drive } = ctx
+
+  const lock = check.tryStart(ctx)
+  if (!lock.allowed) {
+    log.alert('Execution already in progress')
+    log.flush()
     return
   }
 
   try {
 
-    TNLog.info('Trigger execution started')
+    log.info('Execution started')
 
-    TNCheck.setProgress(ctx, 1)
-    TNCheck.setStatus(ctx, 'step 1')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
+    // --- step 1 ---
+    check.setProgress(ctx, 1)
+    check.setStatus(ctx, 'step 1')
+    if (runtime.shouldStop(ctx)) return
 
-    TNCheck.setProgress(ctx, 2)
-    TNCheck.setStatus(ctx, 'step 2')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
+    // --- step 2 ---
+    check.setProgress(ctx, 2)
+    check.setStatus(ctx, 'step 2')
+    if (runtime.shouldStop(ctx)) return
 
-    TNCheck.setProgress(ctx, 3)
-    TNCheck.setStatus(ctx, 'step 3')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
+    // --- step 3 ---
+    check.setProgress(ctx, 3)
+    check.setStatus(ctx, 'step 3')
+    if (runtime.shouldStop(ctx)) return
 
-    TNCheck.setProgress(ctx, 4)
-    TNCheck.setStatus(ctx, 'step 4')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
+    // --- critical section ---
+    runtime.assertTime(ctx, 'before final write')
 
-    TNCheck.setProgress(ctx, 5)
-    TNCheck.setStatus(ctx, 'completed')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
+    // --- step 4 ---
+    check.setProgress(ctx, 4)
+    check.setStatus(ctx, 'step 4')
 
-    TNLog.success('Script finished successfully')
+    // --- done ---
+    check.setProgress(ctx, 5)
+    check.setStatus(ctx, 'completed')
+    log.success('Script finished successfully')
 
   } catch (e) {
 
-    TNCheck.setStatus(ctx, `failed: ${e}`)
-    TNLog.error(e)
+    check.setStatus(ctx, 'failed: ' + (e.message || e))
+    log.error(e)
 
   } finally {
 
-    TNCheck.finish(ctx)
-    TNLog.flush()
-  }
-}
-
-function Script_TriggerUI() {
-
-  const ctx = TNInitiation({
-    runMode: 'TRIGGER_UI',
-  	maxDurationMs: 5 * 60 * 1000
-  })
-
-  const check = TNCheck.tryStart(ctx)
-  if (!check.allowed) {
-    TNLog.alert('Execution already in progress')
-    TNLog.flush()
-    return
-  }
-
-  try {
-
-    TNLog.info('Background UI logging')
-
-    TNCheck.setProgress(ctx, 1)
-    TNCheck.setStatus(ctx, 'step 1')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
-
-    TNCheck.setProgress(ctx, 2)
-    TNCheck.setStatus(ctx, 'step 2')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
-
-    TNCheck.setProgress(ctx, 3)
-    TNCheck.setStatus(ctx, 'step 3')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
-
-    TNCheck.setProgress(ctx, 4)
-    TNCheck.setStatus(ctx, 'step 4')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
-
-    TNCheck.setProgress(ctx, 5)
-    TNCheck.setStatus(ctx, 'completed')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
-
-    TNLog.success('Script finished successfully')
-
-  } catch (e) {
-
-    TNCheck.setStatus(ctx, `failed: ${e}`)
-    TNLog.error(e)
-
-  } finally {
-
-    TNCheck.finish(ctx)
-    TNLog.flush()
-  }
-}
-
-function Script_TriggerSilent() {
-
-  const ctx = TNInitiation({
-    runMode: 'TRIGGER_SILENT',
-  	maxDurationMs: 5 * 60 * 1000
-  })
-
-  const check = TNCheck.tryStart(ctx)
-  if (!check.allowed) {
-    TNLog.alert('Execution already in progress')
-    TNLog.flush()
-    return
-  }
-
-  try {
-
-    // no UI, no file, only console
-    TNLog.info('Silent background task')
-
-    TNCheck.setProgress(ctx, 1)
-    TNCheck.setStatus(ctx, 'step 1')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
-
-    TNCheck.setProgress(ctx, 2)
-    TNCheck.setStatus(ctx, 'step 2')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
-
-    TNCheck.setProgress(ctx, 3)
-    TNCheck.setStatus(ctx, 'step 3')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
-
-    TNCheck.setProgress(ctx, 4)
-    TNCheck.setStatus(ctx, 'step 4')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
-
-    TNCheck.setProgress(ctx, 5)
-    TNCheck.setStatus(ctx, 'completed')
-	if (TNCheck.shouldStop(ctx)) {
-	  TNLog.alert('Execution time limit exceeded')
-	  return
-	}
-
-    TNLog.success('Script finished successfully')
-
-  } catch (e) {
-
-    TNCheck.setStatus(ctx, `failed: ${e}`)
-    TNLog.error(e)
-
-  } finally {
-
-    TNCheck.finish(ctx)
-    TNLog.flush()
+    check.finish(ctx)
+    log.flush()
   }
 }

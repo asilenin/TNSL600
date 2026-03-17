@@ -1,7 +1,6 @@
 /**
  * TNCheck — execution state and concurrency control factory.
- * TNCheck relies on ctx.maxDurationMs to determine whether a running execution is considered stalled.
- * Timeout logic is controlled by the caller, not by TNCheck itself.
+ *
  * Responsibilities:
  * - Prevent parallel script execution
  * - Detect and recover from stalled executions
@@ -9,22 +8,19 @@
  * - Expose execution state for UI / formulas
  *
  * Storage: DocumentProperties (per spreadsheet)
+ *
+ * IMPORTANT:
+ * Exported as a factory function for GAS library compatibility.
  */
-const TNCheck = (() => {
-
-  const MAX_DURATION_MS = 28 * 60 * 1000 // 28 minutes
+function TNCheck() {
 
   // ---------- public API ----------
 
   /**
    * Attempts to acquire execution lock.
    *
-   * @param {Object} ctx - Script execution context (TNSV)
+   * @param {Object} ctx - Script execution context
    * @returns {{ allowed: boolean, cleared: boolean, state: Object }}
-   *
-   * @example
-   * const check = TNCheck.tryStart(ctx)
-   * if (!check.allowed) return
    */
   function tryStart(ctx) {
     const state = _getState(ctx)
@@ -40,7 +36,7 @@ const TNCheck = (() => {
         _resetState(ctx)
         cleared = true
       } else {
-        return { allowed: false, cleared: false, state }
+        return { allowed: false, cleared: false, state: state }
       }
     }
 
@@ -52,7 +48,7 @@ const TNCheck = (() => {
       status: 'started'
     })
 
-    return { allowed: true, cleared, state: _getState(ctx) }
+    return { allowed: true, cleared: cleared, state: _getState(ctx) }
   }
 
   /**
@@ -89,7 +85,6 @@ const TNCheck = (() => {
 
   /**
    * Returns current execution state.
-   * Intended for UI / spreadsheet formulas.
    *
    * @param {Object} ctx
    * @returns {Object}
@@ -108,54 +103,53 @@ const TNCheck = (() => {
   }
 
   /**
- * Checks whether execution time exceeded ctx.maxDurationMs.
- * Intended to be called during script execution.
- *
- * @param {Object} ctx
- * @returns {boolean} true if execution should stop
- */
-function shouldStop(ctx) {
-  if (!ctx.maxDurationMs) return false
+   * Checks whether execution time exceeded ctx.maxDurationMs.
+   * Intended to be called during script execution.
+   *
+   * @param {Object} ctx
+   * @returns {boolean}
+   */
+  function shouldStop(ctx) {
+    if (!ctx.maxDurationMs) return false
 
-  const state = _getState(ctx)
-  if (!state.startTime) return false
+    const state = _getState(ctx)
+    if (!state.startTime) return false
 
-  const now = Date.now()
-  return now - state.startTime > ctx.maxDurationMs
-}
+    return Date.now() - state.startTime > ctx.maxDurationMs
+  }
 
-/**
- * Returns execution state formatted as a row for spreadsheet UI.
- * Intended to be used in custom functions or UI bindings.
- *
- * @param {string} scriptName
- * @returns {Array} [run, start, end, status, progress, runner]
- *
- * @example
- * =TN_CHECK_STATE("MyScript")
- */
-function getStateRow(scriptName) {
-  const ctx = TNInitiation({
-    scriptName,
-    runMode: 'USER_SILENT'
-  })
+  /**
+   * Returns execution state formatted as a row for spreadsheet UI.
+   * Intended to be used in custom functions or UI bindings.
+   *
+   * @param {string} scriptName
+   * @returns {Array}
+   *
+   * @example
+   * =TN_CHECK_STATE("MyScript")
+   */
+  function getStateRow(scriptName) {
+    const ctx = TNInitiation({
+      scriptName: scriptName,
+      runMode: 'USER_SILENT'
+    })
 
-  const state = TNCheck.getState(ctx)
+    const state = getState(ctx)
 
-  return [
-    state.run ? String(state.run).toUpperCase() : '',
-    state.startTime ? new Date(state.startTime) : '',
-    state.endTime ? new Date(state.endTime) : '',
-    state.status || '',
-    Math.round(state.progress || 0),
-    state.runner || ''
-  ]
-}
+    return [
+      state.run ? String(state.run).toUpperCase() : '',
+      state.startTime ? new Date(state.startTime) : '',
+      state.endTime ? new Date(state.endTime) : '',
+      state.status || '',
+      Math.round(state.progress || 0),
+      state.runner || ''
+    ]
+  }
 
-  // ---------- internal ----------
+  // ---------- internal helpers ----------
 
   function _key(ctx, name) {
-    return `${ctx.ssId}|${ctx.scriptName}|${name}`
+    return ctx.ssId + '|' + ctx.scriptName + '|' + name
   }
 
   function _props() {
@@ -176,8 +170,8 @@ function getStateRow(scriptName) {
 
   function _setState(ctx, patch) {
     const p = _props()
-    Object.entries(patch).forEach(([k, v]) => {
-      p.setProperty(_key(ctx, k), String(v))
+    Object.keys(patch).forEach(function (k) {
+      p.setProperty(_key(ctx, k), String(patch[k]))
     })
   }
 
@@ -192,13 +186,16 @@ function getStateRow(scriptName) {
     })
   }
 
-  return {
-    tryStart,
-    finish,
-    setProgress,
-    setStatus,
-    getState,
-    reset
-  }
+  // ---------- export ----------
 
-})()
+  return {
+    tryStart: tryStart,
+    finish: finish,
+    setProgress: setProgress,
+    setStatus: setStatus,
+    getState: getState,
+    reset: reset,
+    shouldStop: shouldStop,
+    getStateRow: getStateRow
+  }
+}

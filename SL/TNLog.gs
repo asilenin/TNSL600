@@ -8,8 +8,12 @@
  *
  * UI interactions (toast, alert, modal) are NOT handled here.
  * For user interaction use TNModal.
+ *
+ * IMPORTANT:
+ * This module is exported as a factory function
+ * to ensure compatibility with Google Apps Script libraries.
  */
-const TNLog = (() => {
+function TNLog() {
 
   // ---------- internal state ----------
   let _ctx = null
@@ -34,14 +38,13 @@ const TNLog = (() => {
    * Called automatically from TNInitiation().
    *
    * @param {Object} options
-   * @param {Object} options.context - Script execution context (TNSV)
+   * @param {Object} options.context - Script execution context (ctx)
    * @param {boolean} options.file - Enable writing logs to spreadsheet
    * @param {string} options.level - Minimal log level
-   *
-   * @internal
    */
-  function configure(options = {}) {
+  function configure(options) {
     try {
+      options = options || {}
       _ctx = options.context || null
       _config = Object.assign(_config, options)
     } catch (e) {
@@ -100,14 +103,13 @@ const TNLog = (() => {
 
       const record = {
         ts: new Date(),
-        level,
+        level: level,
         message: String(message),
-        script: _ctx?.scriptName || 'unknown',
-        executionId: _ctx?.executionId || 'n/a',
-        user: _ctx?.user || 'unknown'
+        script: _ctx && _ctx.scriptName ? _ctx.scriptName : 'unknown',
+        executionId: _ctx && _ctx.executionId ? _ctx.executionId : 'n/a',
+        user: _ctx && _ctx.user ? _ctx.user : 'unknown'
       }
 
-      // console is always enabled
       _consoleOutput(record)
 
       if (_ctx && _ctx.logBuffer) {
@@ -122,7 +124,7 @@ const TNLog = (() => {
 
   function _consoleOutput(rec) {
     const prefix = _formatPrefix(rec.level)
-    console.log(`${prefix} ${rec.message}`)
+    console.log(prefix + ' ' + rec.message)
   }
 
   function _writeToLogSheet(records) {
@@ -142,18 +144,20 @@ const TNLog = (() => {
         ])
       }
 
-      const rows = records.map(r => [
-        Utilities.formatDate(
-          r.ts,
-          'Europe/Moscow',
-          'dd.MM.yyyy HH:mm:ss'
-        ),
-        r.level,
-        r.script,
-        r.executionId,
-        r.user,
-        r.message
-      ])
+      const rows = records.map(function (r) {
+        return [
+          Utilities.formatDate(
+            r.ts,
+            'Europe/Moscow',
+            'dd.MM.yyyy HH:mm:ss'
+          ),
+          r.level,
+          r.script,
+          r.executionId,
+          r.user,
+          r.message
+        ]
+      })
 
       sheet
         .getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length)
@@ -174,13 +178,14 @@ const TNLog = (() => {
     }
   }
 
-  return {
-    configure,
-    info,
-    success,
-    alert,
-    error,
-    flush
-  }
+  // ---------- export ----------
 
-})()
+  return {
+    configure: configure,
+    info: info,
+    success: success,
+    alert: alert,
+    error: error,
+    flush: flush
+  }
+}
