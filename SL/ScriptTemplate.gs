@@ -14,7 +14,10 @@
  *                check.setProgress(ctx, n)
  *                check.setStatus(ctx, 'text')
  *                check.finish(ctx)            ← MANDATORY in finally
+ *                check.getElapsed(ctx)        → ms since tryStart
  *                check.getState(ctx) / check.reset(ctx)
+ *                check.setMeta(ctx, key, val) / check.getMeta(ctx, key)
+ *                check.clearMeta(ctx)
  *
  * TNRunTime      runtime.shouldStop(ctx)      → boolean; use inside loops
  *                runtime.assertTime(ctx, lbl) ← throws if budget exceeded
@@ -146,6 +149,26 @@ function Script_Template() {
     log.flush()
 
   }
+}
+
+// ==================================================================
+// SPREADSHEET FORMULA HELPERS
+// Use these functions directly in spreadsheet cells.
+// ==================================================================
+
+/**
+ * Returns execution state of a named script as a row of values.
+ * Paste into a spreadsheet cell as an array formula:
+ *
+ *   =TN_CHECK_STATE("Script_Template")
+ *
+ * Output columns: run | startTime | endTime | status | progress | runner
+ *
+ * @param {string} scriptName
+ * @returns {Array}
+ */
+function TN_CHECK_STATE(scriptName) {
+  return SL6_Main.TNCheck().getStateRow(scriptName)
 }
 
 // ==================================================================
