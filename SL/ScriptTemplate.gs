@@ -21,7 +21,10 @@
  *
  * TNRunTime      runtime.shouldStop(ctx)      → boolean; use inside loops
  *                runtime.assertTime(ctx, lbl) ← throws if budget exceeded
+ *                runtime.elapsed(ctx)         → ms since ctx.startTime
  *                runtime.timeLeft(ctx)        → ms remaining
+ *                runtime.formatTimeLeft(ctx)  → '4m 32s' | '45s' | '—'
+ *                runtime.checkpoint(ctx, lbl) ← debug log + optional setStatus
  *
  * TNDataProcessor
  *                data.readRange(ss, sheet, range)
@@ -75,7 +78,7 @@ function Script_Template() {
     // runMode: 'USER_TOAST',     // manual  → toast to user
 
     // --- time budget ---
-    // TNRunTime uses this for shouldStop() / assertTime()
+    // TNRunTime uses this for shouldStop() / assertTime() / formatTimeLeft()
     // TNCheck auto-clears stalled runs after this duration
     // Omit → no auto-clear, shouldStop() always returns false
     maxDurationMs: 5 * 60 * 1000,  // 5 minutes
@@ -88,6 +91,11 @@ function Script_Template() {
     // --- optional: Main List spreadsheet reader ---
     // true  → ctx.mainList available; false → ctx.mainList is null
     enableMainList: false,
+
+    // --- checkpoint behaviour ---
+    // false → runtime.checkpoint() writes debug log only
+    // true  → runtime.checkpoint() also calls check.setStatus() → visible in =TN_CHECK_STATE()
+    checkpointUpdateStatus: false,
 
     // --- log level: DEBUG | INFO (default) | SUCCESS | ALERT | ERROR ---
     logLevel: 'INFO',

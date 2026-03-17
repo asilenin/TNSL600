@@ -4,13 +4,14 @@
  * This function MUST be the first call in any script using the SL/TN library.
  *
  * @param {Object} options - Initialization options
- * @param {string} [options.scriptName]             - Explicit script name (required when called from another library)
- * @param {string} [options.runMode='USER_SILENT']  - Execution mode
- * @param {string} [options.logLevel='INFO']        - Minimal log level: 'DEBUG' | 'INFO' | 'SUCCESS' | 'ALERT' | 'ERROR'
- * @param {number} [options.maxDurationMs]          - Expected max execution time in ms (used by TNCheck and TNRunTime)
- * @param {string} [options.dataMode='GAS']         - Data backend: 'GAS' | 'API'
- * @param {boolean} [options.enableMainList=false]  - Attach ctx.mainList (TNMainList) to context
- * @param {boolean} [options.debug=false]           - Dump ctx contents to log on startup
+ * @param {string}  [options.scriptName]                  - Explicit script name (required when called from another library)
+ * @param {string}  [options.runMode='USER_SILENT']        - Execution mode
+ * @param {string}  [options.logLevel='INFO']              - Minimal log level: 'DEBUG' | 'INFO' | 'SUCCESS' | 'ALERT' | 'ERROR'
+ * @param {number}  [options.maxDurationMs]                - Expected max execution time in ms (used by TNCheck and TNRunTime)
+ * @param {string}  [options.dataMode='GAS']               - Data backend: 'GAS' | 'API'
+ * @param {boolean} [options.enableMainList=false]         - Attach ctx.mainList (TNMainList) to context
+ * @param {boolean} [options.checkpointUpdateStatus=false] - runtime.checkpoint() also calls check.setStatus()
+ * @param {boolean} [options.debug=false]                  - Dump ctx contents to log on startup
  *
  * @returns {Object} ctx - Script execution context
  */
@@ -39,11 +40,11 @@ function TNInitiation(options) {
   ctx.scriptName = detectedName
 
   // --- spreadsheet ---
-  ctx.ss = SpreadsheetApp.getActiveSpreadsheet()
+  ctx.ss   = SpreadsheetApp.getActiveSpreadsheet()
   ctx.ssId = ctx.ss.getId()
 
   // --- users ---
-  ctx.user = safeGetActiveUser()
+  ctx.user          = safeGetActiveUser()
   ctx.effectiveUser = safeGetEffectiveUser()
 
   // --- run mode ---
@@ -51,6 +52,9 @@ function TNInitiation(options) {
 
   // --- data backend ---
   ctx.dataMode = options.dataMode || 'GAS'
+
+  // --- runtime behaviour ---
+  ctx.checkpointUpdateStatus = options.checkpointUpdateStatus === true
 
   // --- debug flag ---
   ctx.debug = options.debug === true
@@ -69,14 +73,14 @@ function TNInitiation(options) {
   ctx.tabs      = TNTabOpener(ctx)
 
   // --- optional services ---
-  ctx.mainList  = options.enableMainList === true ? TNMainList(ctx) : null
+  ctx.mainList = options.enableMainList === true ? TNMainList(ctx) : null
 
   // --- configure logging ---
   ctx.log.configure({
     context: ctx,
     console: true,
-    file: ctx.runMode === 'TRIGGER_LOG_UI',
-    level: options.logLevel || 'INFO'
+    file:    ctx.runMode === 'TRIGGER_LOG_UI',
+    level:   options.logLevel || 'INFO'
   })
 
   // --- configure UI ---
@@ -88,16 +92,17 @@ function TNInitiation(options) {
   if (ctx.debug === true) {
     ctx.log.info('CTX DEBUG DUMP:')
     ctx.log.info(JSON.stringify({
-      scriptName:     ctx.scriptName,
-      executionId:    ctx.executionId,
-      runMode:        ctx.runMode,
-      dataMode:       ctx.dataMode,
-      maxDurationMs:  ctx.maxDurationMs,
-      enableMainList: options.enableMainList === true,
-      user:           ctx.user,
-      effectiveUser:  ctx.effectiveUser,
-      ssId:           ctx.ssId,
-      startTime:      ctx.startTime
+      scriptName:             ctx.scriptName,
+      executionId:            ctx.executionId,
+      runMode:                ctx.runMode,
+      dataMode:               ctx.dataMode,
+      maxDurationMs:          ctx.maxDurationMs,
+      enableMainList:         options.enableMainList === true,
+      checkpointUpdateStatus: ctx.checkpointUpdateStatus,
+      user:                   ctx.user,
+      effectiveUser:          ctx.effectiveUser,
+      ssId:                   ctx.ssId,
+      startTime:              ctx.startTime
     }))
   }
 
