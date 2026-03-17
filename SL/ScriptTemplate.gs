@@ -8,44 +8,53 @@
  * 1) Initialization (MANDATORY)
  *
  *   const ctx = SL6_Main.TNInitiation({
- *     runMode: 'TRIGGER_LOG_UI',     // execution mode
- *     maxDurationMs: 5 * 60 * 1000,  // execution time limit (ms)
- *     dataMode: 'GAS'                // data backend: 'GAS' | 'API'
+ *     scriptName:    'MyScript',         // required when called from a library
+ *     runMode:       'TRIGGER_LOG_UI',   // execution mode (see Run Modes below)
+ *     maxDurationMs: 5 * 60 * 1000,     // execution time budget in ms
+ *     dataMode:      'GAS',             // data backend: 'GAS' | 'API'
+ *     debug:         false              // true → dump ctx to log on start
  *   })
  *
- *   dataMode:
- *     - 'GAS' → SpreadsheetApp (.getRange, .getValues, etc.)
- *     - 'API' → Sheets Advanced API (Sheets.Spreadsheets.Values)
+ * 2) Destructure services for readability (optional but recommended)
  *
- *   Optional aliases for readability:
+ *   const { log, check, runtime, data, drive, templates, tabs } = ctx
  *
- *     const { log, check, runtime, data, templates } = ctx
+ * ==================================================================
+ * RUN MODES
+ * ==================================================================
+ *
+ *   USER_SILENT    — manual run, no UI, no toast, console only
+ *   USER_TOAST     — manual run, toast to user, console only
+ *   TRIGGER_LOG_UI — background trigger, log to file + UI, no toast
+ *   TRIGGER_UI     — background trigger, UI log only
+ *   TRIGGER_SILENT — background trigger, fully silent, console only
  *
  * ==================================================================
  * AVAILABLE ctx SERVICES
  * ==================================================================
  *
- * Logging (TNLog):
+ * --- Logging (TNLog) ---
  *
  *   log.info('message')
  *   log.success('message')
  *   log.alert('message')
- *   log.error(error)
- *   log.flush()                // MUST be called in finally
+ *   log.error(errorObject)
+ *   log.flush()              // MANDATORY in finally block
  *
- * Runtime control (TNRunTime):
+ * --- Execution state / concurrency (TNCheck) ---
  *
- *   runtime.shouldStop(ctx)
- *   runtime.assertTime(ctx, 'label')
+ *   const lock = check.tryStart(ctx)   // → { allowed, cleared, state }
+ *   check.setProgress(ctx, n)          // numeric step indicator
+ *   check.setStatus(ctx, 'text')       // text status for UI / formulas
+ *   check.finish(ctx)                  // MANDATORY in finally block
  *
- * Execution state / concurrency (TNCheck):
+ * --- Runtime time control (TNRunTime) ---
  *
- *   check.tryStart(ctx)
- *   check.setProgress(ctx, n)
- *   check.setStatus(ctx, 'text')
- *   check.finish(ctx)
+ *   runtime.shouldStop(ctx)              // → boolean; use inside loops
+ *   runtime.assertTime(ctx, 'label')     // throws if time budget exceeded
+ *   runtime.timeLeft(ctx)               // → ms remaining
  *
- * Data access (TNDataProcessor):
+ * --- Data access (TNDataProcessor) ---
  *
  *   // Regular ranges
  *   data.readRange(ss, 'Sheet1', 'A2:D')
@@ -55,90 +64,83 @@
  *   data.readNamedRange(ss, 'MyNamedRange')
  *   data.writeNamedRange(ss, 'MyNamedRange', value)
  *
- *   // Copy ranges between spreadsheets
+ *   // Copy range between spreadsheets
  *   data.copyRange({
- *     sourceSS: srcSS,
+ *     sourceSS:    srcSS,
  *     sourceSheet: 'Source',
  *     sourceRange: 'A2:D',
- *     destSS: dstSS,
- *     destSheet: 'Dest',
- *     destRange: 'A2',
- *     clear: true
+ *     destSS:      dstSS,
+ *     destSheet:   'Dest',
+ *     destRange:   'A2',
+ *     clear:       true
  *   })
  *
  *   // Named range → named range
  *   data.updateNamedRange(srcSS, dstSS, 'SRC_NAME', 'DST_NAME')
  *
- * Template resolution (TNTemplateSelector):
+ * --- Drive access (TNDriveProcessor) ---
  *
- *   // Get active template URL by name (e.g. 'CE', 'TIMING')
+ *   // Mode is inherited from ctx.dataMode; override if needed:
+ *   drive.configure({ mode: 'API' })
+ *
+ *   // GAS mode: work with Folder objects
+ *   const root = DriveApp.getRootFolder()
+ *   const folder = drive.getOrCreateFolder(root, ctx.scriptName)
+ *   drive.ensureEditorAccess(folder.getId(), ctx.user)
+ *   const url = drive.buildFolderUrl(folder.getId())
+ *
+ *   // API mode: work with folder IDs (strings)
+ *   drive.configure({ mode: 'API' })
+ *   const folderId = drive.getOrCreateFolder('PARENT_FOLDER_ID', 'Reports')
+ *   drive.ensureEditorAccess(folderId, ctx.user)
+ *
+ *   // URL helpers
+ *   const fileId = drive.extractIdFromUrl('https://docs.google.com/...')
+ *   const fileUrl = drive.buildFileUrl(fileId)
+ *
+ * --- Browser tab opener (TNTabOpener) ---
+ *
+ *   tabs.open(url)   // works only in USER_SILENT / USER_TOAST modes
+ *
+ * --- Template resolution (TNTemplateSelector) ---
+ *
  *   const url = templates.getActiveTemplateUrl('CE')
  *
- *   // Or full metadata
  *   const tpl = templates.getActiveTemplate('CE')
- *   // tpl.version
- *   // tpl.url
- * 
- *  * Drive access (TNDriveProcessor):
- *
- *   // Configure backend (optional, usually inherited from dataMode)
- *   ctx.drive.configure({ mode: 'GAS' }) // or 'API'
- *
- *   // Get root folder
- *   const root = DriveApp.getRootFolder()
- *
- *   // Create / get subfolder
- *   const projectFolder =
- *     ctx.drive.getOrCreateFolder(root, ctx.scriptName)
- *
- *   // Ensure editor rights
- *   ctx.drive.ensureEditorAccess(
- *     projectFolder.getId(),
- *     ctx.user
- *   )
- *
- *   // API mode example
- *   ctx.drive.configure({ mode: 'API' })
- *   const folderId =
- *     ctx.drive.getOrCreateFolder('PARENT_FOLDER_ID', 'Reports')
- *
- *   //  Main List usage
- *   const department = ctx.mainList.readNamedRange('DepartmentCode');
- *   const matrix = ctx.mainList.readSheet('Employees');
+ *   // tpl.version  — version identifier from registry
+ *   // tpl.url      — spreadsheet URL
  *
  * ==================================================================
  * TEMPLATE GUARANTEES
  * ==================================================================
  *
- * - mandatory TNCheck lifecycle
- * - runtime safety via TNRunTime
- * - structured progress and status reporting
- *
- * Templates are intentionally minimal
- * and MUST NOT contain business logic.
+ * - TNCheck lifecycle is always complete (tryStart → finish)
+ * - TNRunTime guards prevent hard GAS timeout
+ * - log.flush() is always called in finally
+ * - No business logic in this file
  */
 function Script_Template() {
 
-  //comment const scriptName if script in GAS
-  const scriptName =
-    SL6_Main.TNGetCallerName() || 'Script_Template'
+  // scriptName: use TNGetCallerName() when called from a consumer project.
+  // If the script lives directly in GAS (not a library), remove this line
+  // and pass scriptName as a string literal to TNInitiation.
+  const scriptName = SL6_Main.TNGetCallerName() || 'Script_Template'
 
   const ctx = SL6_Main.TNInitiation({
-    scriptName: scriptName,
-    runMode: 'TRIGGER_LOG_UI',
-    // runMode: 'USER_SILENT',
-    // runMode: 'USER_TOAST',
-    // runMode: 'TRIGGER_UI',
-    // runMode: 'TRIGGER_SILENT',
-    //enableMainList: true,
+    scriptName:    scriptName,
+    runMode:       'TRIGGER_LOG_UI',
+    // runMode:    'USER_SILENT',
+    // runMode:    'USER_TOAST',
+    // runMode:    'TRIGGER_UI',
+    // runMode:    'TRIGGER_SILENT',
     maxDurationMs: 5 * 60 * 1000,
-    dataMode: 'GAS', // or 'API'
-    debug: false // or true
+    dataMode:      'GAS', // or 'API'
+    debug:         false  // set true to dump ctx on startup
   })
 
-  // optional aliases for readability
-  const { log, check, runtime, data, templates, tabs, drive } = ctx
+  const { log, check, runtime, data, drive, templates, tabs } = ctx
 
+  // --- concurrency guard ---
   const lock = check.tryStart(ctx)
   if (!lock.allowed) {
     log.alert('Execution already in progress')
@@ -165,7 +167,7 @@ function Script_Template() {
     check.setStatus(ctx, 'step 3')
     if (runtime.shouldStop(ctx)) return
 
-    // --- critical section ---
+    // --- point of no return: assert enough time before heavy write ---
     runtime.assertTime(ctx, 'before final write')
 
     // --- step 4 ---
@@ -186,5 +188,6 @@ function Script_Template() {
 
     check.finish(ctx)
     log.flush()
+
   }
 }

@@ -63,6 +63,7 @@ function TNInitiation(options) {
   ctx.check = TNCheck()
   ctx.runtime = TNRunTime()
   ctx.data = TNDataProcessor(ctx)
+  ctx.drive     = TNDriveProcessor(ctx)
   ctx.templates = TNTemplateSelector(ctx)
   ctx.tabs = TNTabOpener(ctx)
 

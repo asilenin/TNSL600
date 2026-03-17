@@ -1,64 +1,66 @@
 /**
- * TNDriveProcessor — Google Drive access helper for SL6_Main.
+ * TNDriveProcessor — Google Drive access factory for SL6_Main.
  *
  * Supports two backends:
- * - GAS  → DriveApp
- * - API  → Advanced Drive API (Drive.*)
+ * - GAS → DriveApp
+ * - API → Advanced Drive API (Drive.*)
  *
  * Notes:
  * - In API mode you MUST enable Advanced Google Services: Drive API
- * - For Shared Drives support, API calls include supportsAllDrives/includeItemsFromAllDrives
+ * - For Shared Drives, API calls include supportsAllDrives/includeItemsFromAllDrives
+ * - Backend mode is inherited from ctx.dataMode unless overridden via configure()
+ *
+ * @param {Object} ctx - Script execution context from TNInitiation
+ * @returns {Object} TNDriveProcessor public API
  */
-var TNDriveProcessor = {
+function TNDriveProcessor(ctx) {
 
-  _mode: 'GAS',
+  // ---------- internal state ----------
 
-  // --------------------------------------------------
-  // configuration
-  // --------------------------------------------------
+  let _mode = ctx && ctx.dataMode ? ctx.dataMode : 'GAS'
+
+  // ---------- configuration ----------
 
   /**
-   * Configure backend mode.
+   * Overrides backend mode for this instance.
    *
    * @param {{mode: ('GAS'|'API')}} options
    */
-  configure: function (options) {
-    options = options || {};
+  function configure(options) {
+    options = options || {}
     if (options.mode === 'GAS' || options.mode === 'API') {
-      this._mode = options.mode;
+      _mode = options.mode
     }
-  },
+  }
 
-  // --------------------------------------------------
-  // helpers: ID / URL
-  // --------------------------------------------------
+  // ---------- helpers: ID / URL ----------
 
   /**
    * Extracts Google Drive file or folder ID from URL.
    *
    * @param {string} url
-   * @returns {string} fileId or folderId
+   * @returns {string}
    */
-  extractIdFromUrl: function (url) {
-    var match = String(url).match(/[-\w]{25,}/);
+  function extractIdFromUrl(url) {
+    const match = String(url).match(/[-\w]{25,}/)
     if (!match) {
-      throw new Error('TNDriveProcessor.extractIdFromUrl: invalid URL');
+      throw new Error('TNDriveProcessor.extractIdFromUrl: invalid URL')
     }
-    return match[0];
-  },
+    return match[0]
+  }
 
   /**
-   * Builds a Google Drive file URL from ID.
+   * Builds a Google Sheets file URL from ID.
    *
    * @param {string} fileId
    * @returns {string}
    */
-  buildFileUrl: function (fileId) {
+  function buildFileUrl(fileId) {
     if (!fileId) {
-      throw new Error('TNDriveProcessor.buildFileUrl: invalid fileId');
+      throw new Error('TNDriveProcessor.buildFileUrl: invalid fileId')
     }
-    return 'https://docs.google.com/spreadsheets/d/' + fileId;
-  },
+    return 'https://docs.google.com/spreadsheets/d/' + fileId
+  }
 
   /**
    * Builds a Google Drive folder URL from ID.
@@ -66,73 +68,91 @@ var TNDriveProcessor = {
    * @param {string} folderId
    * @returns {string}
    */
-  buildFolderUrl: function (folderId) {
+  function buildFolderUrl(folderId) {
     if (!folderId) {
-      throw new Error('TNDriveProcessor.buildFolderUrl: invalid folderId');
+      throw new Error('TNDriveProcessor.buildFolderUrl: invalid folderId')
     }
-    return 'https://drive.google.com/drive/folders/' + folderId;
-  },
+    return 'https://drive.google.com/drive/folders/' + folderId
+  }
 
-  // --------------------------------------------------
-  // folders
-  // --------------------------------------------------
+  // ---------- folders ----------
 
   /**
    * Returns folder with given name inside parent. Creates if missing.
    *
    * GAS mode:
-   *   parent = GoogleAppsScript.Drive.Folder
-   *   returns GoogleAppsScript.Drive.Folder
+   *   parent  = GoogleAppsScript.Drive.Folder object
+   *   returns   GoogleAppsScript.Drive.Folder object
    *
    * API mode:
-   *   parent = parentFolderId (string)
-   *   returns folderId (string)
+   *   parent  = parentFolderId (string)
+   *   returns   folderId (string)
    *
    * @param {(GoogleAppsScript.Drive.Folder|string)} parent
    * @param {string} folderName
    * @returns {(GoogleAppsScript.Drive.Folder|string)}
    */
-  getOrCreateFolder: function (parent, folderName) {
+  function getOrCreateFolder(parent, folderName) {
     if (!parent || !folderName) {
-      throw new Error('TNDriveProcessor.getOrCreateFolder: invalid arguments');
+      throw new Error('TNDriveProcessor.getOrCreateFolder: invalid arguments')
     }
 
-    if (this._mode === 'API') {
-      return this._getOrCreateFolderAPI(String(parent), String(folderName));
+    if (_mode === 'API') {
+      return _getOrCreateFolderAPI(String(parent), String(folderName))
     }
 
-    return this._getOrCreateFolderGAS(parent, String(folderName));
-  },
+    return _getOrCreateFolderGAS(parent, String(folderName))
+  }
 
-  _getOrCreateFolderGAS: function (parentFolder, folderName) {
-    var it = parentFolder.getFoldersByName(folderName);
-    if (it.hasNext()) {
-      return it.next();
+  // ---------- permissions ----------
+
+  /**
+   * Ensures user has editor (writer) access to folder.
+   * No-op if permission already granted.
+   *
+   * @param {string} folderId
+   * @param {string} userEmail
+   */
+  function ensureEditorAccess(folderId, userEmail) {
+    if (!folderId || !userEmail) return
+
+    if (_mode === 'API') {
+      _ensureEditorAccessAPI(String(folderId), String(userEmail))
+      return
     }
-    return parentFolder.createFolder(folderName);
-  },
 
-  _getOrCreateFolderAPI: function (parent, folderName) {
-    var parentFolderId = this._getParentFolderId(parent);
-    var safeName = folderName.replace(/'/g, "\\'");
+    _ensureEditorAccessGAS(String(folderId), String(userEmail))
+  }
 
-    var q =
+  // ---------- internal: folders ----------
+
+  function _getOrCreateFolderGAS(parentFolder, folderName) {
+    const it = parentFolder.getFoldersByName(folderName)
+    if (it.hasNext()) return it.next()
+    return parentFolder.createFolder(folderName)
+  }
+
+  function _getOrCreateFolderAPI(parent, folderName) {
+    const parentFolderId = _getParentFolderId(parent)
+    const safeName = folderName.replace(/'/g, "\\'")
+
+    const q =
       "'" + parentFolderId + "' in parents and " +
       "mimeType='application/vnd.google-apps.folder' and " +
-      "name='" + safeName + "' and trashed=false";
+      "name='" + safeName + "' and trashed=false"
 
-    var res = Drive.Files.list({
+    const res = Drive.Files.list({
       q: q,
       fields: 'files(id,name)',
       supportsAllDrives: true,
       includeItemsFromAllDrives: true
-    });
+    })
 
     if (res && res.files && res.files.length > 0) {
-      return res.files[0].id;
+      return res.files[0].id
     }
 
-    var created = Drive.Files.create(
+    const created = Drive.Files.create(
       {
         name: folderName,
         mimeType: 'application/vnd.google-apps.folder',
@@ -140,66 +160,40 @@ var TNDriveProcessor = {
       },
       null,
       { supportsAllDrives: true }
-    );
+    )
 
-    return created.id;
-  },
+    return created.id
+  }
 
-  _getParentFolderId: function (parent) {
-    if (typeof parent === 'string') return parent;
-    if (parent && typeof parent.getId === 'function') {
-      return parent.getId();
-    }
-    throw new Error('TNDriveProcessor: invalid parent folder reference');
-  },
+  function _getParentFolderId(parent) {
+    if (typeof parent === 'string') return parent
+    if (parent && typeof parent.getId === 'function') return parent.getId()
+    throw new Error('TNDriveProcessor: invalid parent folder reference')
+  }
 
-  // --------------------------------------------------
-  // permissions
-  // --------------------------------------------------
+  // ---------- internal: permissions ----------
 
-  /**
-   * Ensures user has editor (writer) access to folder.
-   * If already has permission — no-op.
-   *
-   * @param {string} folderId
-   * @param {string} userEmail
-   */
-  ensureEditorAccess: function (folderId, userEmail) {
-    if (!folderId || !userEmail) return;
+  function _ensureEditorAccessGAS(folderId, userEmail) {
+    const folder = DriveApp.getFolderById(folderId)
+    const editors = folder.getEditors()
 
-    if (this._mode === 'API') {
-      this._ensureEditorAccessAPI(String(folderId), String(userEmail));
-      return;
+    for (let i = 0; i < editors.length; i++) {
+      if (editors[i].getEmail() === userEmail) return
     }
 
-    this._ensureEditorAccessGAS(String(folderId), String(userEmail));
-  },
+    folder.addEditor(userEmail)
+  }
 
-  _ensureEditorAccessGAS: function (folderId, userEmail) {
-    var folder = DriveApp.getFolderById(folderId);
-    var editors = folder.getEditors();
-
-    for (var i = 0; i < editors.length; i++) {
-      if (editors[i].getEmail() === userEmail) {
-        return;
-      }
-    }
-
-    folder.addEditor(userEmail);
-  },
-
-  _ensureEditorAccessAPI: function (folderId, userEmail) {
-    var list = Drive.Permissions.list(folderId, {
+  function _ensureEditorAccessAPI(folderId, userEmail) {
+    const list = Drive.Permissions.list(folderId, {
       fields: 'permissions(emailAddress,role)',
       supportsAllDrives: true
-    });
+    })
 
     if (list && list.permissions && list.permissions.length) {
-      for (var i = 0; i < list.permissions.length; i++) {
-        var p = list.permissions[i];
-        if (p && p.emailAddress === userEmail) {
-          return;
-        }
+      for (let i = 0; i < list.permissions.length; i++) {
+        const p = list.permissions[i]
+        if (p && p.emailAddress === userEmail) return
       }
     }
 
@@ -211,7 +205,17 @@ var TNDriveProcessor = {
       },
       folderId,
       { supportsAllDrives: true }
-    );
+    )
   }
 
-};
+  // ---------- export ----------
+
+  return {
+    configure,
+    extractIdFromUrl,
+    buildFileUrl,
+    buildFolderUrl,
+    getOrCreateFolder,
+    ensureEditorAccess
+  }
+}
