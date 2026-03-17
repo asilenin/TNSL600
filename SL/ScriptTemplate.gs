@@ -2,79 +2,62 @@
  * Canonical script template for SL/TN (SL6_Main) library.
  *
  * ==================================================================
- * AVAILABLE ctx SERVICES
+ * ctx SERVICES (access via destructuring or ctx.*)
  * ==================================================================
  *
- * --- Logging (TNLog) ---
+ * TNLog          log.debug/info/success/alert/error(msg)
+ *                log.group(label) / log.groupEnd()
+ *                log.setContext(key, value) / log.dropContext()
+ *                log.flush()                  ← MANDATORY in finally
  *
- *   log.info('message')
- *   log.success('message')
- *   log.alert('message')
- *   log.error(errorObject)
- *   log.flush()              // MANDATORY in finally block
+ * TNCheck        check.tryStart(ctx)          → { allowed, cleared, state }
+ *                check.setProgress(ctx, n)
+ *                check.setStatus(ctx, 'text')
+ *                check.finish(ctx)            ← MANDATORY in finally
+ *                check.getState(ctx) / check.reset(ctx)
  *
- * --- Execution state / concurrency (TNCheck) ---
+ * TNRunTime      runtime.shouldStop(ctx)      → boolean; use inside loops
+ *                runtime.assertTime(ctx, lbl) ← throws if budget exceeded
+ *                runtime.timeLeft(ctx)        → ms remaining
  *
- *   const lock = check.tryStart(ctx)   // → { allowed, cleared, state }
- *   check.setProgress(ctx, n)          // numeric step indicator
- *   check.setStatus(ctx, 'text')       // text status for UI / formulas
- *   check.finish(ctx)                  // MANDATORY in finally block
- *   check.getState(ctx)                // → current state object
- *   check.reset(ctx)                   // force-clear stuck execution
+ * TNDataProcessor
+ *                data.readRange(ss, sheet, range)
+ *                data.writeRange(ss, sheet, range, values)
+ *                data.readNamedRange(ss, name)
+ *                data.writeNamedRange(ss, name, value)
+ *                data.clearExceptHeader(sheet)
+ *                data.copyRange({ sourceSS, sourceSheet, sourceRange,
+ *                                 destSS, destSheet, destRange, clear? })
+ *                data.updateNamedRange(srcSS, dstSS, srcName, dstName)
  *
- * --- Runtime time control (TNRunTime) ---
+ * TNDriveProcessor
+ *                drive.configure({ mode: 'API' })
+ *                drive.getOrCreateFolder(parent, name) → Folder | folderId
+ *                drive.ensureEditorAccess(folderId, email)
+ *                drive.extractIdFromUrl(url)  → id
+ *                drive.buildFileUrl(fileId)   → url
+ *                drive.buildFolderUrl(id)     → url
  *
- *   runtime.shouldStop(ctx)            // → boolean; soft check inside loops
- *   runtime.assertTime(ctx, 'label')   // throws if budget exceeded; use before heavy ops
- *   runtime.timeLeft(ctx)              // → ms remaining
+ * TNMainList     requires enableMainList: true
+ *                mainList.readNamedRange(name) → scalar | array
+ *                mainList.readSheet(name)      → 2D array
  *
- * --- Data access (TNDataProcessor) ---
+ * TNTabOpener    tabs.open(url)               — USER modes only
  *
- *   data.readRange(ss, 'Sheet1', 'A2:D')
- *   data.writeRange(ss, 'Sheet1', 'A2', values)
- *   data.readNamedRange(ss, 'RangeName')
- *   data.writeNamedRange(ss, 'RangeName', value)
- *   data.clearExceptHeader(sheet)
- *   data.copyRange({ sourceSS, sourceSheet, sourceRange,
- *                    destSS, destSheet, destRange, clear? })
- *   data.updateNamedRange(srcSS, dstSS, 'SRC_NAME', 'DST_NAME')
+ * TNTemplateSelector
+ *                templates.getActiveTemplateUrl(name) → url
+ *                templates.getActiveTemplate(name)    → { version, url }
  *
- * --- Drive access (TNDriveProcessor) ---
- *
- *   drive.configure({ mode: 'API' })                    // override mode if needed
- *   drive.getOrCreateFolder(parentFolder, 'FolderName') // GAS: Folder obj → Folder obj
- *   drive.getOrCreateFolder('parentId', 'FolderName')   // API: string → string id
- *   drive.ensureEditorAccess(folderId, userEmail)
- *   drive.extractIdFromUrl(url)                         // → id string
- *   drive.buildFileUrl(fileId)                          // → spreadsheet URL
- *   drive.buildFolderUrl(folderId)                      // → folder URL
- *
- * --- Main List (TNMainList) — requires enableMainList: true ---
- *
- *   mainList.readNamedRange('RangeName')   // → scalar or array
- *   mainList.readSheet('SheetName')        // → 2D array (with header)
- *
- * --- Browser tab opener (TNTabOpener) ---
- *
- *   tabs.open(url)   // only in USER_SILENT / USER_TOAST modes
- *
- * --- Template resolution (TNTemplateSelector) ---
- *
- *   templates.getActiveTemplateUrl('CE')          // → url string
- *   templates.getActiveTemplate('CE')             // → { version, url }
- *
- * --- UI dialogs (TNModal) — only in USER_TOAST mode ---
- *
- *   modal.toast('message')    // non-blocking notification
- *   modal.alert('message')    // blocking dialog
- *   modal.error('message')    // blocking error dialog
+ * TNModal        modal.toast/alert/error(msg) — USER_TOAST mode only
  */
+
+// ==================================================================
+// MAIN SCRIPT
+// ==================================================================
+
 function Script_Template() {
 
-  // scriptName: TNGetCallerName() detects the function name automatically
-  // when the script is called from a consumer project (not inside a library).
-  // If the script lives directly in GAS IDE — remove this line and pass
-  // scriptName as a string literal in TNInitiation below.
+  // Remove next line if script lives directly in GAS (not called from a library)
   const scriptName = SL6_Main.TNGetCallerName() || 'Script_Template'
 
   const ctx = SL6_Main.TNInitiation({
@@ -82,36 +65,31 @@ function Script_Template() {
     scriptName: scriptName,
 
     // --- run mode (pick one) ---
-    runMode: 'TRIGGER_LOG_UI',   // background trigger → log written to 'log' sheet + UI
-    // runMode: 'TRIGGER_UI',    // background trigger → UI log only, no file
-    // runMode: 'TRIGGER_SILENT',// background trigger → fully silent, console only
-    // runMode: 'USER_SILENT',   // manual run → no UI, no toast, console only
-    // runMode: 'USER_TOAST',    // manual run → toast shown to user, console only
+    runMode: 'TRIGGER_LOG_UI',    // trigger → log to 'log' sheet + UI
+    // runMode: 'TRIGGER_UI',     // trigger → UI log only, no file
+    // runMode: 'TRIGGER_SILENT', // trigger → silent, console only
+    // runMode: 'USER_SILENT',    // manual  → no UI, no toast
+    // runMode: 'USER_TOAST',     // manual  → toast to user
 
     // --- time budget ---
-    // If set: TNRunTime.shouldStop() and assertTime() use this value.
-    // TNCheck auto-clears stalled executions after this duration.
-    // If omitted: no auto-clear, shouldStop() always returns false.
-    maxDurationMs: 5 * 60 * 1000, // 5 minutes
+    // TNRunTime uses this for shouldStop() / assertTime()
+    // TNCheck auto-clears stalled runs after this duration
+    // Omit → no auto-clear, shouldStop() always returns false
+    maxDurationMs: 5 * 60 * 1000,  // 5 minutes
 
     // --- data backend ---
-    // 'GAS' → SpreadsheetApp (getRange / getValues / setValues)
-    // 'API' → Sheets Advanced API (Sheets.Spreadsheets.Values)
-    //         requires Advanced Google Services: Google Sheets API
+    // 'GAS' → SpreadsheetApp
+    // 'API' → Sheets Advanced API (enable in Advanced Google Services)
     dataMode: 'GAS',
 
-    // --- optional services ---
-    // true  → ctx.mainList is available (TNMainList instance)
-    // false → ctx.mainList is null (default, saves one SS open call)
+    // --- optional: Main List spreadsheet reader ---
+    // true  → ctx.mainList available; false → ctx.mainList is null
     enableMainList: false,
 
-    // --- log level ---
-    // Messages below this level are suppressed.
-    // 'DEBUG' | 'INFO' (default) | 'SUCCESS' | 'ALERT' | 'ERROR'
+    // --- log level: DEBUG | INFO (default) | SUCCESS | ALERT | ERROR ---
     logLevel: 'INFO',
 
-    // --- debug mode ---
-    // true → dumps full ctx summary to log immediately after init
+    // --- debug: true → dump full ctx to log on init ---
     debug: false
 
   })
@@ -145,7 +123,7 @@ function Script_Template() {
     check.setStatus(ctx, 'step 3')
     if (runtime.shouldStop(ctx)) return
 
-    // --- point of no return: assert enough time before heavy write ---
+    // --- point of no return ---
     runtime.assertTime(ctx, 'before final write')
 
     // --- step 4 ---
@@ -168,4 +146,27 @@ function Script_Template() {
     log.flush()
 
   }
+}
+
+// ==================================================================
+// LOG ROTATION
+// Call RotateLogs() manually or via monthly trigger (see below).
+// ==================================================================
+
+/**
+ * Deletes log rows older than 90 days from the 'log' sheet.
+ * Adjust retentionDays as needed.
+ * Run manually or via trigger registered by SetupRotationTrigger().
+ */
+function RotateLogs() {
+  SL6_Main.TNLog().rotateLogs(SpreadsheetApp.getActiveSpreadsheet(), 90)
+}
+
+/**
+ * Registers a monthly trigger that calls RotateLogs() on the 1st of each month.
+ * Call this function ONCE manually from the Apps Script IDE.
+ * Safe to call multiple times — will not create duplicate triggers.
+ */
+function SetupRotationTrigger() {
+  SL6_Main.TNLog().registerRotationTrigger('RotateLogs')
 }

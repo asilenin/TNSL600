@@ -53,6 +53,11 @@ function TNLog() {
   }
 
   /** @param {string} message */
+  function debug(message) {
+    _log('DEBUG', message)
+  }
+
+  /** @param {string} message */
   function info(message) {
     _log('INFO', message)
   }
@@ -148,7 +153,7 @@ function TNLog() {
         return [
           Utilities.formatDate(
             r.ts,
-            'Europe/Moscow',
+            ctx.ss.getSpreadsheetTimeZone(),
             'dd.MM.yyyy HH:mm:ss'
           ),
           r.level,
@@ -170,12 +175,25 @@ function TNLog() {
 
   function _formatPrefix(level) {
     switch (level) {
+      case 'DEBUG': return '🔍'
       case 'SUCCESS': return '✅'
       case 'ERROR': return '❌'
       case 'ALERT': return '🟡'
       case 'INFO': return 'ℹ️'
       default: return ''
     }
+  }
+
+  function group(label) {
+    _groupStack.push({ label: label, ts: Date.now() })
+    _log('DEBUG', '── begin: ' + label + ' ──')
+  }
+
+  function groupEnd() {
+    const g = _groupStack.pop()
+    if (!g) return
+    const elapsed = ((Date.now() - g.ts) / 1000).toFixed(1)
+    _log('DEBUG', '── end: ' + g.label + ' (' + elapsed + 's) ──')
   }
 
   // ---------- export ----------
