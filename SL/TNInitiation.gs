@@ -63,9 +63,20 @@ function TNInitiation(options) {
   // --- logging buffer ---
   ctx.logBuffer = []
 
-  // --- services (factories) ---
-  ctx.log       = TNLog()
-  ctx.modal     = TNModal()
+  // --- log: configure first so all subsequent services can write to it ---
+  ctx.log = TNLog()
+  ctx.log.configure({
+    context: ctx,
+    console: true,
+    file:    ctx.runMode === 'TRIGGER_LOG_UI',
+    level:   options.logLevel || 'INFO'
+  })
+
+  // --- modal: configure after log so suppressed calls can be logged ---
+  ctx.modal = TNModal()
+  ctx.modal.configure(ctx)
+
+  // --- remaining services (factories) ---
   ctx.check     = TNCheck()
   ctx.runtime   = TNRunTime()
   ctx.data      = TNDataProcessor(ctx)
@@ -85,17 +96,6 @@ function TNInitiation(options) {
   } else {
     ctx.mainList = null
   }
-
-  // --- configure logging ---
-  ctx.log.configure({
-    context: ctx,
-    console: true,
-    file:    ctx.runMode === 'TRIGGER_LOG_UI',
-    level:   options.logLevel || 'INFO'
-  })
-
-  // --- configure UI ---
-  ctx.modal.configure(ctx)
 
   ctx.log.info('Start script: ' + ctx.scriptName)
 

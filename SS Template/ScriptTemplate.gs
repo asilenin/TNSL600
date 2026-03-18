@@ -82,7 +82,16 @@
  *                templates.getActiveTemplateUrl(name) → url
  *                templates.getActiveTemplate(name)    → { version, url }
  *
- * TNModal        modal.toast/alert/error(msg) — USER_TOAST mode only
+ * TNModal        All methods degrade safely when UI is unavailable:
+ *                  USER_TOAST  → full UI shown
+ *                  USER_SILENT → suppressed, logged via log.debug
+ *                  TRIGGER_*   → suppressed, logged via log.debug
+ *
+ *                modal.toast(msg, title?, durationSec?) — non-blocking
+ *                modal.alert(msg)                       — blocking dialog
+ *                modal.error(msg)                       — blocking error dialog
+ *                modal.confirm(msg, defaultValue?)      → boolean
+ *                modal.prompt(msg, defaultValue?)       → string | null
  */
 
 // ==================================================================
@@ -103,7 +112,7 @@ function Script_Template() {
     // runMode: 'TRIGGER_UI',     // trigger → UI log only, no file
     // runMode: 'TRIGGER_SILENT', // trigger → silent, console only
     // runMode: 'USER_SILENT',    // manual  → no UI, no toast
-    // runMode: 'USER_TOAST',     // manual  → toast to user
+    // runMode: 'USER_TOAST',     // manual  → toast + confirm + prompt available
 
     // --- time budget ---
     // TNRunTime uses this for shouldStop() / assertTime() / formatTimeLeft()
