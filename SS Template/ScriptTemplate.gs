@@ -79,8 +79,39 @@
  * TNTabOpener    tabs.open(url)               — USER modes only
  *
  * TNTemplateSelector
- *                templates.getActiveTemplateUrl(name) → url
- *                templates.getActiveTemplate(name)    → { version, url }
+ *                Requires enableMainList: true — reads registry SS ID
+ *                from Main List named range 'templatesList'.
+ *                Lazy init: registry SS opened only on first call.
+ *                Results cached for script lifetime.
+ *
+ *                templates.listTemplates()
+ *                  → [{ name, version, url }, ...]
+ *
+ *                templates.getActiveTemplate(name)
+ *                  → { version, url }
+ *
+ *                templates.getActiveTemplateUrl(name)
+ *                  → url string (shorthand)
+ *
+ *                --- Usage patterns ---
+ *
+ *                // Pattern 1: get URL directly by known name
+ *                const url = templates.getActiveTemplateUrl('CE')
+ *
+ *                // Pattern 2: get full metadata by known name
+ *                const tpl = templates.getActiveTemplate('CE')
+ *                log.info('v' + tpl.version + ': ' + tpl.url)
+ *
+ *                // Pattern 3: list all, then find by variable name
+ *                const templateName = 'CE'
+ *                const list = templates.listTemplates()
+ *                const found = list.find(t => t.name === templateName)
+ *                if (found) log.info(found.url)
+ *
+ *                // Pattern 4: list all for UI or logging
+ *                templates.listTemplates().forEach(t => {
+ *                  log.info(t.name + ' v' + t.version)
+ *                })
  *
  * TNModal        All methods degrade safely when UI is unavailable:
  *                  USER_TOAST  → full UI shown
@@ -129,6 +160,7 @@ function Script_Template() {
     // true  → ctx.mainList available; false → ctx.mainList is null
     // mainListSsId is REQUIRED when enableMainList is true
     // SS is opened once at init and reused across all mainList calls
+    // Also required for TNTemplateSelector (reads registry ID from 'templatesList')
     enableMainList: false,
     // mainListSsId: 'YOUR_MAIN_LIST_SPREADSHEET_ID',
 
