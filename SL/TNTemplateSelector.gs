@@ -92,7 +92,7 @@ function TNTemplateSelector(ctx) {
 
       // find active row
       const activeRows = table.valuesClean.filter(function (row) {
-        return isActiveFlag(row[aIdx])
+        return TNHelpers.isActiveFlag(row[aIdx])
       })
 
       if (activeRows.length === 0) {

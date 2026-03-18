@@ -123,6 +123,22 @@
  *                modal.error(msg)                       — blocking error dialog
  *                modal.confirm(msg, defaultValue?)      → boolean
  *                modal.prompt(msg, defaultValue?)       → string | null
+ *
+ * TNHelpers      Shared utilities. Access via SL6_Main.TNHelpers in consumer scripts.
+ *                Inside library modules — via global TNHelpers object.
+ *
+ *                TNHelpers.normalizeBoolean(value)    → boolean
+ *                TNHelpers.isActiveFlag(value)        → boolean
+ *                TNHelpers.formatDate(date, tz?, fmt?) → string
+ *                  default fmt: 'dd.MM.yyyy HH:mm:ss'
+ *                  default tz:  spreadsheet timezone
+ *                TNHelpers.chunkArray(array, size)   → Array<Array>
+ *                  splits array into chunks of given size
+ *                TNHelpers.sleep(ms)
+ *                  pauses execution, useful between API calls
+ *                TNHelpers.isEmpty(value)             → boolean
+ *                  true for: null, undefined, '', [], {}
+ *                  false for: 0, false, non-empty values
  */
 
 // ==================================================================
