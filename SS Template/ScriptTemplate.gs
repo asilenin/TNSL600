@@ -124,6 +124,14 @@
  *                modal.confirm(msg, defaultValue?)      → boolean
  *                modal.prompt(msg, defaultValue?)       → string | null
  *
+ * TNConfig        SL6_Main.TNConfig.VERSION            → current library version
+ *                SL6_Main.TNConfig.MAIN_LIST_SS_ID    → set once during TNSetup
+ *                SL6_Main.TNConfig.LOG_SHEET_NAME     → 'log'
+ *                SL6_Main.TNConfig.DEFAULT_RUN_MODE   → 'USER_SILENT'
+ *                SL6_Main.TNConfig.DEFAULT_DATA_MODE  → 'GAS'
+ *                SL6_Main.TNConfig.DEFAULT_LOG_LEVEL  → 'INFO'
+ *                SL6_Main.TNConfig.DEFAULT_SAFETY_MS  → 30000
+ *
  * TNHelpers      Shared utilities. Access via SL6_Main.TNHelpers in consumer scripts.
  *                Inside library modules — via global TNHelpers object.
  *

@@ -20,6 +20,23 @@
  */
 var TNConfig = {
 
+  // ---------- version ----------
+
+  /**
+   * Current library version.
+   * Follows Semantic Versioning: MAJOR.MINOR.PATCH[-stage]
+   * All versions prior to 1.0.0 are beta.
+   *
+   * Access from consumer script: SL6_Main.TNConfig.VERSION
+   *
+   * @example
+   * ctx.log.info('Library: ' + SL6_Main.TNConfig.VERSION)
+   * // -> 6.1.0-beta
+   *
+   * @type {string}
+   */
+  VERSION: '6.1.0-beta',
+
   // ---------- system ----------
 
   /**
