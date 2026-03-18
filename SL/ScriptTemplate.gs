@@ -54,10 +54,21 @@
  * TNDriveProcessor
  *                drive.configure({ mode: 'API' })
  *                drive.getOrCreateFolder(parent, name) → Folder | folderId
+ *                drive.copyFile(fileId, destFolderId, newName?) → newFileId
+ *                drive.moveFile(fileId, newParentId)
+ *                drive.moveFolder(folderId, newParentId)
  *                drive.ensureEditorAccess(folderId, email)
- *                drive.extractIdFromUrl(url)  → id
- *                drive.buildFileUrl(fileId)   → url
- *                drive.buildFolderUrl(id)     → url
+ *                drive.extractIdFromUrl(url)     → id
+ *                drive.buildFileUrl(fileId)      → url
+ *                drive.buildFolderUrl(folderId)  → url
+ *                drive.getFileMetadata(fileId)
+ *                  → { id, name, mimeType, type, url, createdTime, modifiedTime,
+ *                      size, owner, description, starred, trashed,
+ *                      parents (API only) }
+ *                drive.getFolderMetadata(folderId)
+ *                  → { id, name, mimeType, type, url, createdTime, modifiedTime,
+ *                      owner, description, starred, trashed,
+ *                      parents (API only) }
  *
  * TNMainList     requires enableMainList: true
  *                mainList.readNamedRange(name) → scalar | array
