@@ -43,6 +43,10 @@
  *                  indexes     — sheet column indexes (0-based) for each header
  *                  valuesRaw   — data rows, full width of sheet
  *                  valuesClean — data rows, only header columns, in header order
+ *                data.batchRead(ss, [{ sheet, range }, ...])
+ *                  → array of 2D arrays, same order as input
+ *                  API mode: single batchGet request
+ *                  GAS mode: sequential reads
  *                data.batchWrite([{ ss, sheet, range, values }, ...])
  *                  API mode: single batchUpdate request per spreadsheet
  *                  GAS mode: sequential writes

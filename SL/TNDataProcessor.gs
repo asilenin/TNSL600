@@ -322,6 +322,50 @@ function TNDataProcessor(ctx) {
     }
   }
 
+  // ---------- batch read ----------
+
+  /**
+   * Reads multiple ranges from a single spreadsheet in one operation.
+   * In API mode: uses batchGet — single HTTP request.
+   * In GAS mode: executes sequentially.
+   *
+   * Returns an array of results in the same order as the input operations.
+   * Each result is a 2D array (same format as readRange).
+   *
+   * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ss
+   * @param {Array<{sheet: string, range: string}>} operations
+   * @returns {Array<Array<Array<any>>>}
+   *
+   * @example
+   * const [orders, config, summary] = data.batchRead(ctx.ss, [
+   *   { sheet: 'Orders',  range: 'A2:D' },
+   *   { sheet: 'Config',  range: 'A1:B' },
+   *   { sheet: 'Summary', range: 'C5'   }
+   * ])
+   */
+  function batchRead(ss, operations) {
+    if (!operations || !operations.length) return []
+
+    if (_mode() === 'API') {
+      const ranges = operations.map(function (op) {
+        return "'" + op.sheet + "'!" + op.range
+      })
+
+      const res = Sheets.Spreadsheets.Values.batchGet(ss.getId(), {
+        ranges: ranges
+      })
+
+      return (res.valueRanges || []).map(function (vr) {
+        return vr.values || []
+      })
+    }
+
+    // GAS mode: sequential reads
+    return operations.map(function (op) {
+      return readRange(ss, op.sheet, op.range)
+    })
+  }
+
   // ---------- batch write ----------
 
   /**
@@ -405,6 +449,7 @@ function TNDataProcessor(ctx) {
     copyRange,
     updateNamedRange,
     findTable,
+    batchRead,
     batchWrite
   }
 }
