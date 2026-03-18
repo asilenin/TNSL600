@@ -29,12 +29,23 @@
  * TNDataProcessor
  *                data.readRange(ss, sheet, range)
  *                data.writeRange(ss, sheet, range, values)
+ *                data.readSheet(ss, sheet)            → 2D array (all rows incl. header)
+ *                data.appendRow(ss, sheet, rowArray)
  *                data.readNamedRange(ss, name)
  *                data.writeNamedRange(ss, name, value)
- *                data.clearExceptHeader(sheet)
+ *                data.clearExceptHeader(ss, sheet)
  *                data.copyRange({ sourceSS, sourceSheet, sourceRange,
  *                                 destSS, destSheet, destRange, clear? })
  *                data.updateNamedRange(srcSS, dstSS, srcName, dstName)
+ *                data.findTable(ss, sheet, ['Col1','Col2'])
+ *                  → { headers, indexes, valuesRaw, valuesClean } | null
+ *                  headers     — all non-empty headers in the found row
+ *                  indexes     — sheet column indexes (0-based) for each header
+ *                  valuesRaw   — data rows, full width of sheet
+ *                  valuesClean — data rows, only header columns, in header order
+ *                data.batchWrite([{ ss, sheet, range, values }, ...])
+ *                  API mode: single batchUpdate request per spreadsheet
+ *                  GAS mode: sequential writes
  *
  * TNDriveProcessor
  *                drive.configure({ mode: 'API' })
