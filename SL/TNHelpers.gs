@@ -54,6 +54,26 @@ var TNHelpers = {
     return value === true || value === 'TRUE'
   },
 
+  // ---------- id ----------
+
+  /**
+   * Generates a new unique identifier (UUID v4).
+   * Wrapper over Utilities.getUuid() for readability and testability.
+   *
+   * Used internally for ctx.executionId.
+   * Also useful in consumer scripts for generating record IDs,
+   * batch identifiers, or any unique key.
+   *
+   * @returns {string} UUID v4 string, e.g. '110e8400-e29b-41d4-a716-446655440000'
+   *
+   * @example
+   * TNHelpers.generateId()
+   * // → '110e8400-e29b-41d4-a716-446655440000'
+   */
+  generateId: function () {
+    return Utilities.getUuid()
+  },
+
   // ---------- date ----------
 
   /**

@@ -128,6 +128,7 @@
  *                Inside library modules — via global TNHelpers object.
  *
  *                TNHelpers.normalizeBoolean(value)    → boolean
+ *                TNHelpers.generateId()               → UUID string
  *                TNHelpers.isActiveFlag(value)        → boolean
  *                TNHelpers.formatDate(date, tz?, fmt?) → string
  *                  default fmt: 'dd.MM.yyyy HH:mm:ss'

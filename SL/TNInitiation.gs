@@ -23,7 +23,7 @@ function TNInitiation(options) {
 
   // --- execution timing ---
   ctx.startTime = new Date()
-  ctx.executionId = Utilities.getUuid()
+  ctx.executionId = TNHelpers.generateId()
   ctx.maxDurationMs =
     typeof options.maxDurationMs === 'number'
       ? options.maxDurationMs
@@ -125,6 +125,13 @@ function TNInitiation(options) {
 // These functions are internal to the library.
 // Do NOT call them from consumer scripts.
 
+/**
+ * Returns the active user's email address.
+ * Falls back to 'unknown@local' if session info is unavailable (e.g. in triggers).
+ *
+ * @private
+ * @returns {string}
+ */
 function safeGetActiveUser() {
   try {
     return Session.getActiveUser().getEmail()
@@ -133,6 +140,13 @@ function safeGetActiveUser() {
   }
 }
 
+/**
+ * Returns the effective user's email address.
+ * Falls back to 'unknown@local' if session info is unavailable.
+ *
+ * @private
+ * @returns {string}
+ */
 function safeGetEffectiveUser() {
   try {
     return Session.getEffectiveUser().getEmail()
@@ -141,6 +155,14 @@ function safeGetEffectiveUser() {
   }
 }
 
+/**
+ * Detects the name of the function that called TNInitiation.
+ * Uses stack trace parsing — works reliably one level up from TNInitiation.
+ * Returns 'unknownScript' if detection fails.
+ *
+ * @private
+ * @returns {string}
+ */
 function detectCallerFunctionName() {
   try {
     throw new Error()

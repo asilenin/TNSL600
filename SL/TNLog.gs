@@ -310,7 +310,7 @@ function TNLog() {
 
       const rows = records.map(function (r) {
         return [
-          Utilities.formatDate(r.ts, tz, 'dd.MM.yyyy HH:mm:ss'),
+          TNHelpers.formatDate(r.ts, tz),
           r.level,
           r.script,
           r.executionId,
