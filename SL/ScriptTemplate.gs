@@ -70,9 +70,11 @@
  *                      owner, description, starred, trashed,
  *                      parents (API only) }
  *
- * TNMainList     requires enableMainList: true
- *                mainList.readNamedRange(name) → scalar | array
- *                mainList.readSheet(name)      → 2D array
+ * TNMainList     requires enableMainList: true + mainListSsId
+ *                SS is opened once at init — no repeated openById calls
+ *                mainList.readNamedRange(name)     → scalar | array
+ *                mainList.readSheet(name)          → 2D array
+ *                mainList.readMultiple([n1, n2])   → { name: value, ... }
  *
  * TNTabOpener    tabs.open(url)               — USER modes only
  *
@@ -116,7 +118,10 @@ function Script_Template() {
 
     // --- optional: Main List spreadsheet reader ---
     // true  → ctx.mainList available; false → ctx.mainList is null
+    // mainListSsId is REQUIRED when enableMainList is true
+    // SS is opened once at init and reused across all mainList calls
     enableMainList: false,
+    // mainListSsId: 'YOUR_MAIN_LIST_SPREADSHEET_ID',
 
     // --- checkpoint behaviour ---
     // false → runtime.checkpoint() writes debug log only

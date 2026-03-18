@@ -4,38 +4,20 @@
  * Responsibilities:
  * - Read named ranges from Main List spreadsheet
  * - Read full sheets (all values)
+ * - Read multiple named ranges in one call
  *
  * Notes:
  * - Spreadsheet ID must be set via MAIN_LIST_SS_ID before use
+ * - SS object is opened once in TNInitiation and passed via constructor
  * - Uses ctx.data (TNDataProcessor) for all data access
  * - Uses ctx.log (TNLog) for logging
+ * - Enabled via enableMainList: true in TNInitiation options
  *
  * @param {Object} ctx - Script execution context from TNInitiation
+ * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ss - Pre-opened Main List spreadsheet
  * @returns {Object} TNMainList public API
  */
-function TNMainList(ctx) {
-
-  // ---------- configuration ----------
-
-  /**
-   * ID of the Main List spreadsheet.
-   * Replace with the actual spreadsheet ID before use.
-   *
-   * @type {string}
-   */
-  const MAIN_LIST_SS_ID = 'PUT_MAIN_LIST_SPREADSHEET_ID_HERE'
-
-  // ---------- internal helpers ----------
-
-  function _getSS() {
-    return SpreadsheetApp.openById(MAIN_LIST_SS_ID)
-  }
-
-  function _log(msg) {
-    if (ctx && ctx.log) {
-      ctx.log.info(msg)
-    }
-  }
+function TNMainList(ctx, ss) {
 
   // ---------- public API ----------
 
@@ -51,10 +33,8 @@ function TNMainList(ctx) {
       throw new Error('TNMainList.readNamedRange: rangeName is required')
     }
 
-    const ss = _getSS()
     const value = ctx.data.readNamedRange(ss, rangeName)
-
-    _log('TNMainList: read named range: ' + rangeName)
+    ctx.log.debug('TNMainList: read named range: ' + rangeName)
     return value
   }
 
@@ -70,23 +50,42 @@ function TNMainList(ctx) {
       throw new Error('TNMainList.readSheet: sheetName is required')
     }
 
-    const ss = _getSS()
-    const sheet = ss.getSheetByName(sheetName)
+    const values = ctx.data.readSheet(ss, sheetName)
+    ctx.log.debug('TNMainList: read sheet: ' + sheetName)
+    return values
+  }
 
-    if (!sheet) {
-      throw new Error('TNMainList.readSheet: sheet not found: ' + sheetName)
+  /**
+   * Reads multiple named ranges in a single call.
+   * Returns an object keyed by range name.
+   * SS is opened only once — reuses the instance from TNInitiation.
+   *
+   * @param {string[]} rangeNames
+   * @returns {Object.<string, *>}
+   *
+   * @example
+   * const config = mainList.readMultiple(['Department', 'Year', 'Region'])
+   * // → { Department: 'Sales', Year: 2024, Region: 'North' }
+   */
+  function readMultiple(rangeNames) {
+    if (!rangeNames || !rangeNames.length) {
+      throw new Error('TNMainList.readMultiple: rangeNames array is required')
     }
 
-    const values = sheet.getDataRange().getValues()
-    _log('TNMainList: read sheet: ' + sheetName)
+    const result = {}
+    rangeNames.forEach(function (name) {
+      result[name] = ctx.data.readNamedRange(ss, name)
+    })
 
-    return values
+    ctx.log.debug('TNMainList: read multiple ranges: ' + rangeNames.join(', '))
+    return result
   }
 
   // ---------- export ----------
 
   return {
     readNamedRange,
-    readSheet
+    readSheet,
+    readMultiple
   }
 }

@@ -10,6 +10,7 @@
  * @param {number}  [options.maxDurationMs]                - Expected max execution time in ms (used by TNCheck and TNRunTime)
  * @param {string}  [options.dataMode='GAS']               - Data backend: 'GAS' | 'API'
  * @param {boolean} [options.enableMainList=false]         - Attach ctx.mainList (TNMainList) to context
+ * @param {string}  [options.mainListSsId]                 - Main List spreadsheet ID (required when enableMainList: true)
  * @param {boolean} [options.checkpointUpdateStatus=false] - runtime.checkpoint() also calls check.setStatus()
  * @param {boolean} [options.debug=false]                  - Dump ctx contents to log on startup
  *
@@ -73,7 +74,17 @@ function TNInitiation(options) {
   ctx.tabs      = TNTabOpener(ctx)
 
   // --- optional services ---
-  ctx.mainList = options.enableMainList === true ? TNMainList(ctx) : null
+  // Main List SS is opened once here and passed to TNMainList constructor.
+  // This avoids repeated openById() calls across individual read methods.
+  if (options.enableMainList === true) {
+    if (!options.mainListSsId) {
+      throw new Error('TNInitiation: mainListSsId is required when enableMainList is true')
+    }
+    const mainListSS = SpreadsheetApp.openById(options.mainListSsId)
+    ctx.mainList = TNMainList(ctx, mainListSS)
+  } else {
+    ctx.mainList = null
+  }
 
   // --- configure logging ---
   ctx.log.configure({
@@ -98,6 +109,7 @@ function TNInitiation(options) {
       dataMode:               ctx.dataMode,
       maxDurationMs:          ctx.maxDurationMs,
       enableMainList:         options.enableMainList === true,
+      mainListSsId:           options.mainListSsId || null,
       checkpointUpdateStatus: ctx.checkpointUpdateStatus,
       user:                   ctx.user,
       effectiveUser:          ctx.effectiveUser,
