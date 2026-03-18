@@ -46,14 +46,14 @@ function TNTemplateSelector(ctx) {
 
     if (!ctx.mainList) {
       throw new Error(
-        'TNTemplateSelector: requires enableMainList: true and mainListSsId in TNInitiation'
+        'TNTemplateSelector: requires enableMainList: true and TNConfig.MAIN_LIST_SS_ID to be set'
       )
     }
 
-    const ssId = ctx.mainList.readNamedRange('templatesList')
+    const ssId = ctx.mainList.readNamedRange(TNConfig.TEMPLATES_RANGE_NAME)
     if (!ssId || typeof ssId !== 'string') {
       throw new Error(
-        'TNTemplateSelector: named range "templatesList" is missing or empty in Main List'
+        'TNTemplateSelector: named range "templatesList" (TNConfig.TEMPLATES_RANGE_NAME) is missing or empty in Main List'
       )
     }
 

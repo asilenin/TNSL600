@@ -7,7 +7,7 @@
  * - Read multiple named ranges in one call
  *
  * Notes:
- * - Spreadsheet ID must be set via MAIN_LIST_SS_ID before use
+ * - Spreadsheet ID is read from TNConfig.MAIN_LIST_SS_ID (set once during TNSetup)
  * - SS object is opened once in TNInitiation and passed via constructor
  * - Uses ctx.data (TNDataProcessor) for all data access
  * - Uses ctx.log (TNLog) for logging

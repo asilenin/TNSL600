@@ -70,7 +70,7 @@
  *                      owner, description, starred, trashed,
  *                      parents (API only) }
  *
- * TNMainList     requires enableMainList: true + mainListSsId
+ * TNMainList     requires enableMainList: true + TNConfig.MAIN_LIST_SS_ID set
  *                SS is opened once at init — no repeated openById calls
  *                mainList.readNamedRange(name)     → scalar | array
  *                mainList.readSheet(name)          → 2D array
@@ -128,7 +128,6 @@
  *                Inside library modules — via global TNHelpers object.
  *
  *                TNHelpers.normalizeBoolean(value)    → boolean
- *                TNHelpers.generateId()               → UUID string
  *                TNHelpers.isActiveFlag(value)        → boolean
  *                TNHelpers.formatDate(date, tz?, fmt?) → string
  *                  default fmt: 'dd.MM.yyyy HH:mm:ss'
@@ -175,11 +174,10 @@ function Script_Template() {
 
     // --- optional: Main List spreadsheet reader ---
     // true  → ctx.mainList available; false → ctx.mainList is null
-    // mainListSsId is REQUIRED when enableMainList is true
+    // Requires TNConfig.MAIN_LIST_SS_ID to be set (done once during TNSetup)
     // SS is opened once at init and reused across all mainList calls
     // Also required for TNTemplateSelector (reads registry ID from 'templatesList')
     enableMainList: false,
-    // mainListSsId: 'YOUR_MAIN_LIST_SPREADSHEET_ID',
 
     // --- checkpoint behaviour ---
     // false → runtime.checkpoint() writes debug log only

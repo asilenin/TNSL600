@@ -9,8 +9,7 @@
  * @param {string}  [options.logLevel='INFO']              - Minimal log level: 'DEBUG' | 'INFO' | 'SUCCESS' | 'ALERT' | 'ERROR'
  * @param {number}  [options.maxDurationMs]                - Expected max execution time in ms (used by TNCheck and TNRunTime)
  * @param {string}  [options.dataMode='GAS']               - Data backend: 'GAS' | 'API'
- * @param {boolean} [options.enableMainList=false]         - Attach ctx.mainList (TNMainList) to context
- * @param {string}  [options.mainListSsId]                 - Main List spreadsheet ID (required when enableMainList: true)
+ * @param {boolean} [options.enableMainList=false]         - Attach ctx.mainList (TNMainList) to context; requires TNConfig.MAIN_LIST_SS_ID
  * @param {boolean} [options.checkpointUpdateStatus=false] - runtime.checkpoint() also calls check.setStatus()
  * @param {boolean} [options.debug=false]                  - Dump ctx contents to log on startup
  *
@@ -36,7 +35,7 @@ function TNInitiation(options) {
     detectedName === '' ||
     detectedName === 'Object'
   ) {
-    detectedName = options.scriptName || 'unknownScript'
+    detectedName = options.scriptName || TNConfig.UNKNOWN_SCRIPT_NAME
   }
   ctx.scriptName = detectedName
 
@@ -49,10 +48,10 @@ function TNInitiation(options) {
   ctx.effectiveUser = safeGetEffectiveUser()
 
   // --- run mode ---
-  ctx.runMode = options.runMode || 'USER_SILENT'
+  ctx.runMode = options.runMode || TNConfig.DEFAULT_RUN_MODE
 
   // --- data backend ---
-  ctx.dataMode = options.dataMode || 'GAS'
+  ctx.dataMode = options.dataMode || TNConfig.DEFAULT_DATA_MODE
 
   // --- runtime behaviour ---
   ctx.checkpointUpdateStatus = options.checkpointUpdateStatus === true
@@ -69,7 +68,7 @@ function TNInitiation(options) {
     context: ctx,
     console: true,
     file:    ctx.runMode === 'TRIGGER_LOG_UI',
-    level:   options.logLevel || 'INFO'
+    level:   options.logLevel || TNConfig.DEFAULT_LOG_LEVEL
   })
 
   // --- modal: configure after log so suppressed calls can be logged ---
@@ -88,10 +87,10 @@ function TNInitiation(options) {
   // Main List SS is opened once here and passed to TNMainList constructor.
   // This avoids repeated openById() calls across individual read methods.
   if (options.enableMainList === true) {
-    if (!options.mainListSsId) {
-      throw new Error('TNInitiation: mainListSsId is required when enableMainList is true')
+    if (!TNConfig.MAIN_LIST_SS_ID || TNConfig.MAIN_LIST_SS_ID === 'PUT_MAIN_LIST_SPREADSHEET_ID_HERE') {
+      throw new Error('TNInitiation: TNConfig.MAIN_LIST_SS_ID is not set. Run TNSetup first.')
     }
-    const mainListSS = SpreadsheetApp.openById(options.mainListSsId)
+    const mainListSS = SpreadsheetApp.openById(TNConfig.MAIN_LIST_SS_ID)
     ctx.mainList = TNMainList(ctx, mainListSS)
   } else {
     ctx.mainList = null
@@ -109,7 +108,7 @@ function TNInitiation(options) {
       dataMode:               ctx.dataMode,
       maxDurationMs:          ctx.maxDurationMs,
       enableMainList:         options.enableMainList === true,
-      mainListSsId:           options.mainListSsId || null,
+      mainListSsId:           TNConfig.MAIN_LIST_SS_ID || null,
       checkpointUpdateStatus: ctx.checkpointUpdateStatus,
       user:                   ctx.user,
       effectiveUser:          ctx.effectiveUser,
@@ -126,9 +125,7 @@ function TNInitiation(options) {
 // Do NOT call them from consumer scripts.
 
 /**
- * Returns the active user's email address.
- * Falls back to 'unknown@local' if session info is unavailable (e.g. in triggers).
- *
+ * Returns the active user email. Falls back to 'unknown@local' in trigger context.
  * @private
  * @returns {string}
  */
@@ -141,9 +138,7 @@ function safeGetActiveUser() {
 }
 
 /**
- * Returns the effective user's email address.
- * Falls back to 'unknown@local' if session info is unavailable.
- *
+ * Returns the effective user email. Falls back to 'unknown@local' if unavailable.
  * @private
  * @returns {string}
  */
@@ -156,10 +151,8 @@ function safeGetEffectiveUser() {
 }
 
 /**
- * Detects the name of the function that called TNInitiation.
- * Uses stack trace parsing — works reliably one level up from TNInitiation.
- * Returns 'unknownScript' if detection fails.
- *
+ * Detects the name of the function that called TNInitiation via stack trace.
+ * Returns TNConfig.UNKNOWN_SCRIPT_NAME if detection fails.
  * @private
  * @returns {string}
  */
@@ -173,5 +166,5 @@ function detectCallerFunctionName() {
       if (match) return match[1]
     }
   }
-  return 'unknownScript'
+  return TNConfig.UNKNOWN_SCRIPT_NAME
 }
