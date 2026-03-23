@@ -43,6 +43,7 @@ function TNDataProcessor(ctx) {
       if (lastRow <= 1) return
 
       Sheets.Spreadsheets.Values.clear(
+        {},
         ssId,
         "'" + sheetName + "'!A2:" + _colLetter(lastCol) + lastRow
       )
